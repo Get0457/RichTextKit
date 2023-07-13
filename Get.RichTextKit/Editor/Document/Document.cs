@@ -32,7 +32,7 @@ public partial class Document
     /// <summary>
     /// Constructs a new TextDocument
     /// </summary>
-    public Document()
+    public Document(IStyle DefaultStyle)
     {
         // Create paragraph list
         UndoManager = new(this);
@@ -45,7 +45,7 @@ public partial class Document
         UndoManager.EndOperation += FireDocumentChanged;
 
         // Temporary... add some text to work with
-        Paragraphs.Add(new TextParagraph(_defaultStyle));
+        Paragraphs.Add(new TextParagraph(DefaultStyle));
         
     }
 
@@ -60,19 +60,6 @@ public partial class Document
             _defaultAlignment = value;
         }
     }
-
-    /// <summary>
-    /// Specifies the style to be used in plain text mode
-    /// </summary>
-    public IStyle DefaultStyle
-    {
-        get => _defaultStyle;
-        set
-        {
-            _defaultStyle = value;
-        }
-    }
-
     /// <summary>
     /// Get the style of the text at a specified code point index
     /// </summary>
@@ -117,7 +104,9 @@ public partial class Document
         // Done!
         return buf;
     }
-
-    IStyle _defaultStyle = StyleManager.Default.Value.DefaultStyle;
     TextAlignment _defaultAlignment = TextAlignment.Left;
+
+    public event TextChangedEventHandler? TextChanged;
+    internal void InvokeTextChanged(TextRange modifiedRange) => TextChanged?.Invoke(modifiedRange);
 }
+public delegate void TextChangedEventHandler(TextRange modifiedRange);

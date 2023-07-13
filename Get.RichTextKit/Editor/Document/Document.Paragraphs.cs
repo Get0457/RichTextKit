@@ -23,6 +23,7 @@ using System.Collections.Specialized;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Editor.Paragraphs.Panel;
 using System.Diagnostics;
+using Get.RichTextKit.Styles;
 
 namespace Get.RichTextKit.Editor;
 
@@ -35,7 +36,7 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
     readonly Document Document;
 
     IList<Paragraph> IParagraphCollection.Paragraphs => this;
-
+    bool initialized;
     internal DocumentParagraphs(Document owner)
     {
         Document = owner;
@@ -99,7 +100,7 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
         if (indexInParagraph > this[paraIndex].Length)
             indexInParagraph = this[paraIndex].Length;
 
-        System.Diagnostics.Debug.Assert(indexInParagraph >= 0);
+       System.Diagnostics.Debug.Assert(indexInParagraph >= 0);
 
         // Done
         return paraIndex;

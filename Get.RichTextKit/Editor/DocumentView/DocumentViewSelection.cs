@@ -15,6 +15,10 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     internal DocumentViewSelection(DocumentView textDocument)
     {
         DocumentView = textDocument;
+        DocumentView.RedrawRequested += UpdateCaretInfoAndNotify;
+        DocumentView.OwnerDocument.Layout.Updated += UpdateCaretInfoAndNotify;
+        DocumentView.YScrollChanged += UpdateCaretInfoAndNotify;
+        DocumentView.XScrollChanged += UpdateCaretInfoAndNotify;
     }
     [AutoEventProperty(OnChanged = nameof(OnRangeChanged))]
     TextRange _Range;
@@ -48,23 +52,31 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
             CurrentPositionStyle = null;
         //var start = DocumentView.Controller.HitTest(new(0, 0));
         //var end = DocumentView.Controller.HitTest(new(0, DocumentView.ViewHeight));
-        StartCaretInfo = DocumentView.Controller.GetCaretInfo(Range.StartCaretPosition);
-        EndCaretInfo = DocumentView.Controller.GetCaretInfo(Range.CaretPosition);
+        UpdateCaretInfo();
         bool change = true;
         if (EndCaretInfo.CaretRectangle.Top < 0)
             DocumentView.YScroll += EndCaretInfo.CaretRectangle.Top;
         else if (EndCaretInfo.CaretRectangle.Bottom - DocumentView.ViewHeight > 0)
             DocumentView.YScroll += EndCaretInfo.CaretRectangle.Bottom - DocumentView.ViewHeight;
         else change = false;
-        if (change)
-        {
-            StartCaretInfo = DocumentView.Controller.GetCaretInfo(Range.StartCaretPosition);
-            EndCaretInfo = DocumentView.Controller.GetCaretInfo(Range.CaretPosition);
-        }
+        if (change) UpdateCaretInfo();
         if (!(wasNotSelection && !Range.IsRange))
             DocumentView.RequestRedraw();
         wasNotSelection = !Range.IsRange;
         PropertyChanged?.Invoke(this, new(null)); // update all, not just range
+    }
+    [Event<Action<DocumentView>>]
+    [Event<EventHandler>]
+    void UpdateCaretInfoAndNotify()
+    {
+        UpdateCaretInfo();
+        PropertyChanged?.Invoke(this, new(nameof(StartCaretInfo)));
+        PropertyChanged?.Invoke(this, new(nameof(EndCaretInfo)));
+    }
+    void UpdateCaretInfo()
+    {
+        StartCaretInfo = DocumentView.Controller.GetCaretInfo(Range.StartCaretPosition);
+        EndCaretInfo = DocumentView.Controller.GetCaretInfo(Range.CaretPosition);
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     protected override void OnChanged(string FormatName)
