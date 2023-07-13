@@ -8,7 +8,7 @@ The original version of this file can be found at https://github.com/toptensoftw
 
 The modification adds more features to the editor library, as well as minor changes in the run to make it easier to make a placeholder run.
 
-Below the current line is the original readme file.
+Below the current line is the modified original readme file.
 
 ![Banner](./Artwork/banner@2x.png)
 
@@ -31,8 +31,6 @@ RichTextKit is a rich-text layout, measurement and rendering library for SkiaSha
 * Ability to paint selection range highlight
 * Easy to use
 * Minimal dependencies (just SkiaSharp and HarfBuzzSharp)
-
-![Sandbox](docsrc/sandbox@2x.png)
 
 
 ## Under Development
