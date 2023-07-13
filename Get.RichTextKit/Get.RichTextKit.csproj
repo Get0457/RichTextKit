@@ -1,0 +1,47 @@
+﻿<!--
+This file has been edited and modified from its original version.
+The original version of this file can be found at https://github.com/toptensoftware/RichTextKit/.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<Nullable>annotations</Nullable>
+		<LangVersion>11</LangVersion>
+		<Version>1.0.1</Version>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/Get0457/RichTextKit</PackageProjectUrl>
+		<PackageTags>rich text, rich, text, Skia, SkiaSharp, Font</PackageTags>
+		<Description>Easy to use rich text rendering for SkiaSharp, including font-fallback, bi-directional text support and more...</Description>
+		<AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+		<RepositoryUrl>https://github.com/Get0457/RichTextKit</RepositoryUrl>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="Resources\BidiClasses.trie" />
+	  <None Remove="Resources\GraphemeClusterClasses.trie" />
+	  <None Remove="Resources\LineBreakClasses.trie" />
+	  <None Remove="Resources\WordBoundaryClasses.trie" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="SkiaSharp" Version="2.88.3" />
+		<PackageReference Include="SkiaSharp.HarfBuzz" Version="2.88.3" />
+		<PackageReference Include="Get.EasyCSharp.Generator" Version="1.2.0" ExcludeAssets="all" PrivateAssets="all" />
+		<PackageReference Include="PolySharp" Version="1.13.2">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="Resources\BidiClasses.trie" />
+	  <EmbeddedResource Include="Resources\GraphemeClusterClasses.trie" />
+	  <EmbeddedResource Include="Resources\LineBreakClasses.trie" />
+	  <EmbeddedResource Include="Resources\WordBoundaryClasses.trie" />
+	</ItemGroup>
+
+</Project>

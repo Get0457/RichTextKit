@@ -1,3 +1,15 @@
+<!--
+This file has been edited and modified from its original version.
+The original version of this file can be found at https://github.com/toptensoftware/RichTextKit/.
+-->
+# RichTextKit
+
+**Note: This repository is forked and modified from [toptensoftware/RichTextKit](https://github.com/toptensoftware/RichTextKit). See [NOTICE](./NOTICE.md) for more information**
+
+The modification adds more features to the editor library, as well as minor changes in the run to make it easier to make a placeholder run.
+
+Below the current line is the original readme file.
+
 ![Banner](./Artwork/banner@2x.png)
 
 # RichTextKit
