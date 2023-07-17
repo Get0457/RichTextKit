@@ -1,6 +1,4 @@
-﻿using Get.RichTextKit.Editor;
-using Get.RichTextKit;
-using Paragraph = Get.RichTextKit.Editor.Paragraphs.Paragraph;
+﻿using Paragraph = Get.RichTextKit.Editor.Paragraphs.Paragraph;
 using Get.RichTextKit.Editor.UndoUnits;
 using System.Drawing;
 using Get.RichTextKit.Styles;

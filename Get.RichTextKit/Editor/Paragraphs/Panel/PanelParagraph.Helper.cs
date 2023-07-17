@@ -10,16 +10,6 @@ using HarfBuzzSharp;
 using System.Collections;
 
 namespace Get.RichTextKit.Editor.Paragraphs.Panel;
-readonly record struct ReadOnlyListWrapper<T>(IList<T> List) : IReadOnlyList<T>
-{
-    public T this[int index] => List[index];
-
-    public int Count => List.Count;
-
-    public IEnumerator<T> GetEnumerator() => List.GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-}
 public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
 {
     public Paragraph GlobalChildrenFromCodePointIndex(CaretPosition position, out IParagraphPanel parent, out int indexInParagraph)

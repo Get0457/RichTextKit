@@ -10,6 +10,8 @@ namespace Get.RichTextKit.Editor;
 
 public abstract class TextRangeBase
 {
+    public const int FontWeightBold = 700;
+    public const int FontWeightNormal = 400;
     protected virtual void OnChanged(string FormatName) { }
     public abstract void ApplyStyle(Func<IStyle, IStyle> styleModifier);
     public abstract StyleStatus GetStyleStatus(Func<IStyle, bool> styleModifier);
@@ -22,8 +24,8 @@ public abstract class TextRangeBase
         {
             if (GetStyleValue(x => x.FontWeight, out var a))
             {
-                if (a is 700) return StyleStatus.On;
-                if (a is 400) return StyleStatus.Off;
+                if (a is FontWeightBold) return StyleStatus.On;
+                if (a is FontWeightNormal) return StyleStatus.Off;
             }
             return StyleStatus.Undefined;
         }
@@ -31,11 +33,11 @@ public abstract class TextRangeBase
         {
             if (value is StyleStatus.On)
             {
-                ApplyStyle(static x => new CopyStyle(x) { FontWeight = 700 });
+                ApplyStyle(static x => new CopyStyle(x) { FontWeight = FontWeightBold });
             }
             else if (value is StyleStatus.Off)
             {
-                ApplyStyle(static x => new CopyStyle(x) { FontWeight = 400 });
+                ApplyStyle(static x => new CopyStyle(x) { FontWeight = FontWeightNormal });
             }
             OnChanged(nameof(Bold));
         }

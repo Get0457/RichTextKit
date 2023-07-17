@@ -119,7 +119,6 @@ public partial class DocumentEditor
         var styledText = new StyledText(codePoints);
         styledText.ApplyStyle(0, styledText.Length, styleToUse);
         ReplaceTextInternal(range, styledText, semantics, -1);
-        Document.InvokeTextChanged(range);
     }
 
     /// <summary>
@@ -198,6 +197,7 @@ public partial class DocumentEditor
                 ImeCaretOffset = imeCaretOffset,
             });
         }
+        Document.InvokeTextChanged(range);
     }
 
     /// <summary>

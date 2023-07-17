@@ -1,6 +1,7 @@
 ﻿// This file has been edited and modified from its original version.
 // The original version of this file can be found at https://github.com/toptensoftware/RichTextKit/.
 // Original copyright notice is below.
+using Get.RichTextKit.Editor.Paragraphs.Panel;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
