@@ -25,6 +25,7 @@ using System.Xml.Linq;
 using Get.RichTextKit;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
+using Get.RichTextKit.Editor.DocumentView;
 
 namespace Get.RichTextKit.Editor.Paragraphs;
 
@@ -150,13 +151,13 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     public override IReadOnlyList<int> WordBoundaryIndicies => _textBlock.WordBoundaryIndicies;
 
     /// <inheritdoc />
-    public override int Length => _textBlock.Length;
+    public override int CodePointLength => _textBlock.Length;
 
     /// <inheritdoc />
-    public override float ContentWidth => _textBlock.MeasuredWidth;
+    protected override float ContentWidthOverride => _textBlock.MeasuredWidth;
 
     /// <inheritdoc />
-    public override float ContentHeight => _textBlock.MeasuredHeight;
+    protected override float ContentHeightOverride => _textBlock.MeasuredHeight;
 
     /// <inheritdoc />
     public TextBlock TextBlock => _textBlock;
@@ -169,30 +170,31 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     // Private attributes
     readonly TextBlock _textBlock;
 
-    public override void DeletePartial(UndoManager<Document> UndoManager, SubRunRecursiveInfo range)
+    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range)
     {
-        UndoManager.Do(new UndoDeleteText(_textBlock, range.Offset, range.Length));
+        UndoManager.Do(new UndoDeleteText(GlobalInfo.CodePointIndex, range.Offset, range.Length));
     }
-    public override bool TryJoin(UndoManager<Document> UndoManager, int thisIndex)
+    public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
     {
-        UndoManager.Do(new UndoJoinTextParagraphs(thisIndex));
+        UndoManager.Do(new UndoJoinTextParagraphs(GlobalInfo.CodePointIndex));
         return true;
     }
-    public override Paragraph Split(UndoManager<Document> UndoManager, int splitIndex)
+    public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
     {
         // Split the paragraph at the insertion point into paragraphs A and B
         var paraA = this;
 
-        if (splitIndex == Length) return new TextParagraph(paraA.EndStyle);
+        if (splitIndex == CodePointLength) return new TextParagraph(paraA.EndStyle);
 
-        var paraB = new TextParagraph(paraA.TextBlock.Copy(splitIndex, Length));
-        if (splitIndex != Length - 1)
-            UndoManager.Do(new UndoDeleteText(paraA.TextBlock, splitIndex, TextBlock.Length - splitIndex - 1));
+        var paraB = new TextParagraph(paraA.TextBlock.Copy(splitIndex, CodePointLength));
+        if (splitIndex != CodePointLength - 1)
+            UndoManager.Do(new UndoDeleteText(paraA.GlobalInfo.CodePointIndex, splitIndex, TextBlock.Length - splitIndex - 1));
         return paraB;
     }
 
-    public override void SetStyleContinuingFrom(Paragraph other)
+    public void SetStyleContinuingFrom(Paragraph other)
     {
+        Margin = other.Margin;
         if (other is ITextParagraph tp)
         {
             TextBlock.Alignment = tp.TextBlock.Alignment;

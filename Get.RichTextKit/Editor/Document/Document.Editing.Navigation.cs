@@ -124,7 +124,7 @@ public partial class DocumentEditor
             {
                 // Move to end of previous paragraph
                 if (paraIndex > 0)
-                    return new CaretPosition(parent.Paragraphs[paraIndex - 1].GlobalInfo.CodePointIndex + parent.Paragraphs[paraIndex - 1].Length - 1);
+                    return new CaretPosition(parent.Paragraphs[paraIndex - 1].GlobalInfo.CodePointIndex + parent.Paragraphs[paraIndex - 1].CodePointLength - 1);
                 else
                     // Move to the position before this paragraph or the start of the document if there's nothing before
                     return new CaretPosition(Math.Max(0, parent.Paragraphs[paraIndex].GlobalInfo.CodePointIndex - 1));
@@ -138,7 +138,7 @@ public partial class DocumentEditor
                 else
                     // Move to the position after this paragraph or the end of the document if there's no more
                     return new CaretPosition(
-                        Math.Min(parent.Paragraphs[paraIndex].GlobalInfo.CodePointIndex + parent.Paragraphs[paraIndex + 1].Length,
+                        Math.Min(parent.Paragraphs[paraIndex].GlobalInfo.CodePointIndex + parent.Paragraphs[paraIndex + 1].CodePointLength,
                         Length - 1
                     ));
             }
@@ -222,7 +222,7 @@ public partial class DocumentEditor
             {
                 // Last unwrapped line?
                 if (ci.LineIndex + 1 >= para.LineCount)
-                    return new CaretPosition(para.GlobalInfo.CodePointIndex + para.Length - 1);
+                    return new CaretPosition(para.GlobalInfo.CodePointIndex + para.CodePointLength - 1);
 
                 // Return code point index of the next line, but with alternate caret position
                 // so caret appears at the end of this line

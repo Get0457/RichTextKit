@@ -55,6 +55,8 @@ public partial class Document
         if (_suppressDocumentChangeEvents)
             return;
 
+        Layout.Invalidate();
+
         // Notify all views
         Changed?.Invoke(this);
 

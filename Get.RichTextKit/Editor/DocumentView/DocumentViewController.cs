@@ -105,7 +105,7 @@ public partial class DocumentViewController
             }
         }
         var newPos = DocumentView.OwnerDocument.Editor.Navigate(
-            originalRange.CaretPosition,
+            originalRange.EndCaretPosition,
             wholeWord ?
                 direction switch
                 {
@@ -205,7 +205,7 @@ public partial class DocumentViewController
     public void InsertNewParagraph(Paragraph paragraph)
     {
         Type(Document.NewParagraphSeparator.ToString());
-        DocumentView.OwnerDocument.Paragraphs.GlobalFromCodePointIndex(DocumentView.Selection.Range.CaretPosition, out var parent, out var paragraphIndex, out _);
+        DocumentView.OwnerDocument.Paragraphs.GlobalFromCodePointIndex(DocumentView.Selection.Range.EndCaretPosition, out var parent, out var paragraphIndex, out _);
         DocumentView.OwnerDocument.UndoManager.Do(new UndoInsertParagraph(parent, paragraphIndex, paragraph));
         DocumentView.OwnerDocument.Layout.Invalidate();
         DocumentView.OwnerDocument.Layout.EnsureValid();
@@ -257,12 +257,12 @@ static partial class Extension
     public static CaretPosition GetMinimumCaretPosition(this TextRange r)
     {
         if (r.End > r.Start) r = r.Reversed;
-        return r.CaretPosition;
+        return r.EndCaretPosition;
     }
     public static CaretPosition GetMaximumCaretPosition(this TextRange r)
     {
         if (r.End < r.Start) r = r.Reversed;
-        return r.CaretPosition;
+        return r.EndCaretPosition;
     }
     public static TextRange CreateRangeTo(this CaretPosition a, CaretPosition b)
     {

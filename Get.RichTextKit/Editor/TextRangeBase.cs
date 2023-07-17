@@ -17,7 +17,13 @@ public abstract class TextRangeBase
     public abstract StyleStatus GetStyleStatus(Func<IStyle, bool> styleModifier);
     public abstract bool GetStyleValue<T>(Func<IStyle, T> statusChecker, [NotNullWhen(true)] out T? value);
     public abstract bool GetParagraphSetting<T>(Func<Paragraph, T?> statusChecker, [NotNullWhen(true)] out T? value);
-    public abstract void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Action<Paragraph, T> Setter);
+    public abstract void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter);
+    public void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Action<Paragraph, T> Setter)
+        => ApplyParagraphSetting(newValue, Getter, (p, x) =>
+        {
+            Setter(p, x);
+            return true;
+        });
     public StyleStatus Bold
     {
         get

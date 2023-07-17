@@ -22,7 +22,7 @@ public class DocumentRange : TextRangeBase
     public override bool GetParagraphSetting<T>(Func<Paragraph, T?> statusChecker, [NotNullWhen(true)] out T? value) where T : default
         => TextDocument.GetParagraphSetting(_range, statusChecker, out value);
 
-    public override void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Action<Paragraph, T> Setter)
+    public override void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter)
         => TextDocument.ApplyParagraphSetting(_range, newValue, Getter, Setter);
 
     public override StyleStatus GetStyleStatus(Func<IStyle, bool> styleModifier)

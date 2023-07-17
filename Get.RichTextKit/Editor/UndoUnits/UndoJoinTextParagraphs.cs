@@ -1,23 +1,25 @@
 ﻿using System.Diagnostics;
+using Get.RichTextKit.Editor.DocumentView;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Utils;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
 
-class UndoJoinTextParagraphs : UndoUnit<Document>
+class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
 {
-    public UndoJoinTextParagraphs(int paragraphIndex)
+    public UndoJoinTextParagraphs(int paragraphCodePointIndex)
     {
-        _paragraphIndex = paragraphIndex;
+        _paragraphCodePointIndex = paragraphCodePointIndex;
     }
 
     public override void Do(Document context)
     {
-        var firstPara = context.Paragraphs[_paragraphIndex];
-        var secondPara = context.Paragraphs[_paragraphIndex + 1];
+        var firstPara = context.Paragraphs.GlobalFromCodePointIndex(new(_paragraphCodePointIndex), out var parent, out var _paragraph, out var cpi);
+        var secondPara = parent.Paragraphs[_paragraph + 1];
 
         // Remember what we need to undo
-        _splitPoint = firstPara.Length;
+        _splitPoint = firstPara.CodePointLength;
+        _firstParaGlobalCPI = firstPara.GlobalInfo.CodePointIndex;
         _removedParagraph = secondPara;
 
         // Copy all text from the second paragraph
@@ -26,22 +28,32 @@ class UndoJoinTextParagraphs : UndoUnit<Document>
 
         // Remove the joined paragraph
         secondPara.OnParagraphRemoved(context);
-        context.Paragraphs.RemoveAt(_paragraphIndex + 1);
+        parent.Paragraphs.RemoveAt(_paragraph + 1);
+        context.Layout.Invalidate();
+    }
+    public override void Redo(Document context)
+    {
+        base.Redo(context);
+        NotifyInfo(new(NewSelection: new(_firstParaGlobalCPI + _splitPoint)));
     }
 
     public override void Undo(Document context)
     {
         // Delete the joined text from the first paragraph
-        var firstPara = context.Paragraphs[_paragraphIndex];
+        var firstPara = context.Paragraphs.GlobalFromCodePointIndex(new(_paragraphCodePointIndex), out var parent, out var _paragraph, out var cpi);
         if (firstPara is ITextParagraph firstTextPara)
             firstTextPara.TextBlock.DeleteText(_splitPoint, firstTextPara.TextBlock.Length - _splitPoint);
         else Debugger.Break();
         // Restore the split paragraph
-        context.Paragraphs.Insert(_paragraphIndex + 1, _removedParagraph);
+        parent.Paragraphs.Insert(_paragraph + 1, _removedParagraph);
         _removedParagraph.OnParagraphAdded(context);
+        context.Layout.Invalidate();
+        context.Layout.EnsureValid();
+        NotifyInfo(new(NewSelection: new(_removedParagraph.GlobalInfo.CodePointIndex + _removedParagraph.CodePointLength)));
     }
 
-    int _paragraphIndex;
+    int _paragraphCodePointIndex;
     int _splitPoint;
+    int _firstParaGlobalCPI;
     Paragraph _removedParagraph;
 }

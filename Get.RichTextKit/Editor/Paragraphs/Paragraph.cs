@@ -117,7 +117,7 @@ public abstract class Paragraph : IRun
     /// All paragraphs must have a non-zero length and text paragraphs
     /// should include the end of paragraph marker in the length.
     /// </remarks>
-    public abstract int Length { get; }
+    public abstract int CodePointLength { get; }
 
     /// <summary>
     /// Gets the line count of this paragraph in code points
@@ -137,12 +137,20 @@ public abstract class Paragraph : IRun
     /// <summary>
     /// Qureries the height of this paragraph, excluding margins
     /// </summary>
-    public abstract float ContentHeight { get; }
+    protected abstract float ContentHeightOverride { get; }
+    /// <summary>
+    /// Qureries the height of this paragraph
+    /// </summary>
+    public float ContentHeight => ContentHeightOverride + Margin.Top + Margin.Bottom;
 
     /// <summary>
     /// Queries the width of this paragraph, excluding margins
     /// </summary>
-    public abstract float ContentWidth { get; }
+    protected abstract float ContentWidthOverride { get; }
+    /// <summary>
+    /// Queries the width of this paragraph
+    /// </summary>
+    public float ContentWidth => ContentWidthOverride + Margin.Left + Margin.Right;
     /// <summary>
     /// 
     /// </summary>
@@ -256,24 +264,16 @@ public abstract class Paragraph : IRun
     /// <summary>
     /// The margin
     /// </summary>
-    public Thickness Margin { get; internal set; } = new(0, 0, 0, 30);
+    public Thickness Margin { get; internal set; }
 
     // Explicit implementation of IRun so we can use RunExtensions
     // with the paragraphs collection.
     int IRun.Offset => GlobalInfo.CodePointIndex;
-    int IRun.Length => Length;
-    /// <summary>
-    /// Copy all style attributes from this paragraph to another
-    /// </summary>
-    /// <param name="other">The paragraph to copy style from</param>
-    public virtual void SetStyleContinuingFrom(Paragraph other)
-    {
-        Margin = other.Margin;
-    }
+    int IRun.Length => CodePointLength;
 
-    public abstract void DeletePartial(UndoManager<Document> UndoManager, SubRunRecursiveInfo range);
-    public abstract bool TryJoin(UndoManager<Document> UndoManager, int thisIndex);
-    public abstract Paragraph Split(UndoManager<Document> UndoManager, int splitIndex);
+    public abstract void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range);
+    public abstract bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex);
+    public abstract Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex);
     public abstract void GetTextByAppendTextToBuffer(Utf32Buffer buffer, int position, int length);
     public Utf32Buffer GetText(int position, int length)
     {

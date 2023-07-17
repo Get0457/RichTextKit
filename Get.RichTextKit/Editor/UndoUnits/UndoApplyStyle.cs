@@ -2,9 +2,10 @@
 using Get.RichTextKit;
 using System.Diagnostics;
 using Get.RichTextKit.Styles;
+using Get.RichTextKit.Editor.DocumentView;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
-public class UndoApplyStyle : UndoUnit<Document>
+public class UndoApplyStyle : UndoUnit<Document, DocumentViewUpdateInfo>
 {
     readonly Func<IStyle, IStyle> ModifyStyleFunc;
     TextRange range;
@@ -33,7 +34,11 @@ public class UndoApplyStyle : UndoUnit<Document>
         }
         context.RequestRedraw();
     }
-
+    public override void Redo(Document context)
+    {
+        base.Redo(context);
+        NotifyInfo(new(NewSelection: range));
+    }
     public override void Undo(Document context)
     {
         if (SavedStyles is null)
@@ -55,5 +60,6 @@ public class UndoApplyStyle : UndoUnit<Document>
         SavedStyles.Clear();
         SavedStyles = null;
         context.RequestRedraw();
+        NotifyInfo(new(NewSelection: range));
     }
 }

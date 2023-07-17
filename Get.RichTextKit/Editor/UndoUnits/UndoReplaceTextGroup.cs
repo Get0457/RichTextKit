@@ -2,11 +2,12 @@
 // The original version of this file can be found at https://github.com/toptensoftware/RichTextKit/.
 using Get.RichTextKit;
 using Get.RichTextKit.Editor;
+using Get.RichTextKit.Editor.DocumentView;
 using Get.RichTextKit.Utils;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
 
-class UndoReplaceTextGroup : UndoGroup<Document>
+class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
 {
     public UndoReplaceTextGroup() : base(null)
     {
@@ -31,11 +32,11 @@ class UndoReplaceTextGroup : UndoGroup<Document>
 
             // Check if should extend (will return false on a word boundary 
             // to avoid extending for long spans of typed text)
-            if (!insertUnit.ShouldAppend(text))
+            if (!insertUnit.ShouldAppend(context, text))
                 return false;
 
             // Update the insert unit
-            insertUnit.Append(text);
+            insertUnit.Append(context, text);
 
             // Fire notifications
             context.FireDocumentChanging(new DocumentChangeInfo()
@@ -73,18 +74,18 @@ class UndoReplaceTextGroup : UndoGroup<Document>
             // to type in overtype mode at the very end of a paragraph
             if (Units.Count < 2 || (!(Units[Units.Count - 2] is UndoDeleteText deleteUnit)))
             {
-                deleteUnit = new UndoDeleteText(insertUnit.TextBlock, insertUnit.Offset, 0);
+                deleteUnit = new UndoDeleteText(insertUnit.TextCodePointIndex, insertUnit.Offset, 0);
                 this.Insert(Units.Count - 1, deleteUnit);
             }
 
             // Delete forward if can 
             // (need to do this before insert and doesn't matter if can't)
             int deletedLength = 0;
-            if (deleteUnit.ExtendOvertype(range.Start - _info.CodePointIndex, range.Length))
+            if (deleteUnit.ExtendOvertype(context, range.Start - _info.CodePointIndex, range.Length))
                 deletedLength = range.Length;
 
             // Extend insert unit
-            insertUnit.Append(text);
+            insertUnit.Append(context, text);
 
             // Fire notifications
             context.FireDocumentChanging(new DocumentChangeInfo()
@@ -116,7 +117,7 @@ class UndoReplaceTextGroup : UndoGroup<Document>
                 return false;
 
             // Extend the delete unit
-            if (!deleteUnit.ExtendBackspace(range.Length))
+            if (!deleteUnit.ExtendBackspace(context, range.Length))
                 return false;
 
             // Fire change events
@@ -149,7 +150,7 @@ class UndoReplaceTextGroup : UndoGroup<Document>
                 return false;
 
             // Extend the delete unit
-            if (!deleteUnit.ExtendForwardDelete(range.Length))
+            if (!deleteUnit.ExtendForwardDelete(context, range.Length))
                 return false;
 
             // Update self
@@ -175,7 +176,7 @@ class UndoReplaceTextGroup : UndoGroup<Document>
                 return false;
 
             // Replace the inserted text
-            insertUnit.Replace(text);
+            insertUnit.Replace(context, text);
 
             // Fire notifications
             context.FireDocumentChanging(new DocumentChangeInfo()

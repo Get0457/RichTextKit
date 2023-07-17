@@ -37,6 +37,9 @@ public partial class DocumentLayout : INotifyPropertyChanged
     public event Action? Updating;
     public event Action? Updated;
 
+    [Property(OnChanged = nameof(Invalidate))]
+    int _Spacing = 30;
+
     internal DocumentLayout(Document owner) => Document = owner;
     /// <summary>
     /// Mark the document as needing layout update
@@ -80,7 +83,7 @@ public partial class DocumentLayout : INotifyPropertyChanged
                 Margin.Left -
                 Margin.Right,
                 LineWrap,
-                LineNumberMode: true
+                LineNumberMode: false
             ));
 
             // Position
@@ -110,9 +113,9 @@ public partial class DocumentLayout : INotifyPropertyChanged
                 _measuredWidth = paraWidth;
 
             // Update positions
-            yCoord = para.GlobalInfo.ContentPosition.Y + para.ContentHeight;
+            yCoord = para.GlobalInfo.ContentPosition.Y + para.ContentHeight + _Spacing;
             prevYMargin = para.Margin.Bottom;
-            codePointIndex += para.Length;
+            codePointIndex += para.CodePointLength;
             lineIndex += para.LineCount;
             displayLineIndex += para.DisplayLineCount;
         }

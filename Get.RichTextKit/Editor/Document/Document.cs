@@ -20,6 +20,7 @@ using Get.RichTextKit;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Styles;
+using Get.RichTextKit.Editor.DocumentView;
 
 namespace Get.RichTextKit.Editor;
 
@@ -41,7 +42,7 @@ public partial class Document
         Layout = new(this);
 
         // Create our undo manager
-        UndoManager = new UndoManager<Document>(this);
+        UndoManager = new UndoManager<Document, DocumentViewUpdateInfo>(this);
         UndoManager.EndOperation += FireDocumentChanged;
 
         // Temporary... add some text to work with
@@ -78,7 +79,7 @@ public partial class Document
     /// <summary>
     /// Get the undo manager for this document
     /// </summary>
-    public UndoManager<Document> UndoManager { get; }
+    public UndoManager<Document, DocumentViewUpdateInfo> UndoManager { get; }
 
     /// <summary>
     /// Get the text for a part of the document

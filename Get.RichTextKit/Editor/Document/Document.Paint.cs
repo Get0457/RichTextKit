@@ -84,7 +84,7 @@ public partial class Document
             // Update the selection range for the next paragraph
             if (options.Selection != null)
             {
-                options.Selection = options.Selection.Value.Offset(-p.Length);
+                options.Selection = options.Selection.Value.Offset(-p.CodePointLength);
             }
         }
     }

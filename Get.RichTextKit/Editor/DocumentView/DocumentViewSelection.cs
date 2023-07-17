@@ -28,13 +28,14 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     /// <summary>
     /// Gets the cache style at the current caret position. If the selection is a range, the style is null
     /// </summary>
-    public IStyle? CurrentPositionStyle { get; private set; }
+    internal IStyle? CurrentPositionStyle { get; private set; }
+    public IStyle CurrentCaretStyle => CurrentPositionStyle ?? DocumentView.OwnerDocument.GetStyleAtPosition(Range.EndCaretPosition);
     bool wasNotSelection = false;
     void OnRangeChanged()
     {
         if (!Range.IsRange)
         {
-            CurrentPositionStyle = DocumentView.OwnerDocument.GetStyleAtPosition(Range.CaretPosition);
+            CurrentPositionStyle = DocumentView.OwnerDocument.GetStyleAtPosition(Range.EndCaretPosition);
             if (Range.AltPosition is true)
             {
                 var thestr = DocumentView.OwnerDocument.GetText(new(Range.Start - 1, Range.Start)).ToString();
@@ -76,7 +77,7 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     void UpdateCaretInfo()
     {
         StartCaretInfo = DocumentView.Controller.GetCaretInfo(Range.StartCaretPosition);
-        EndCaretInfo = DocumentView.Controller.GetCaretInfo(Range.CaretPosition);
+        EndCaretInfo = DocumentView.Controller.GetCaretInfo(Range.EndCaretPosition);
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     protected override void OnChanged(string FormatName)
@@ -113,6 +114,6 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     public override bool GetParagraphSetting<T>(Func<Paragraph, T?> statusChecker, [NotNullWhen(true)] out T? value) where T : default
         => DocumentView.OwnerDocument.GetParagraphSetting(Range, statusChecker, out value);
 
-    public override void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Action<Paragraph, T> Setter)
+    public override void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter)
         => DocumentView.OwnerDocument.ApplyParagraphSetting(Range, newValue, Getter, Setter);
 }

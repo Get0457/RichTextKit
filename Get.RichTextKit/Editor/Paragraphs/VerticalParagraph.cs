@@ -7,12 +7,17 @@ using System.Reflection;
 using Get.RichTextKit;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
+using Get.EasyCSharp;
+using Get.RichTextKit.Editor.DocumentView;
 
 namespace Get.RichTextKit.Editor.Paragraphs.Panel;
 
-public class VerticalParagraph : PanelParagraph
+public partial class VerticalParagraph : PanelParagraph
 {
-
+    [Property(OnChanged = nameof(InvokeLayoutChanged))]
+    int _Spacing = 30;
+    void InvokeLayoutChanged() => Owner?.Layout.Invalidate();
+    public new List<Paragraph> Children => base.Children;
     public VerticalParagraph(IStyle style, int amount = 1) : base(style)
     {
         foreach (var _ in ..amount)
@@ -34,39 +39,33 @@ public class VerticalParagraph : PanelParagraph
         {
             child.Layout(parentInfo);
             child.LocalInfo = new(
-                ContentPosition: new(0, YOffset),
+                ContentPosition: OffsetMargin(new(0, YOffset), child.Margin),
                 CodePointIndex: cpiOffset,
                 DisplayLineIndex: displayLineOffset,
                 LineIndex: lineOffset
             );
-            YOffset += child.ContentHeight;
-            cpiOffset += child.Length;
+            YOffset += child.ContentHeight + _Spacing;
+            cpiOffset += child.CodePointLength;
             lineOffset += child.LineCount;
             displayLineOffset += child.DisplayLineCount;
         }
     }
     public override int DisplayLineCount => 1;
 
-    public override void DeletePartial(UndoManager<Document> UndoManager, SubRunRecursiveInfo range)
+    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range)
     {
         //UndoManager.Do(new UndoDeleteText(_textBlock, range.Offset, range.Length));
     }
-    public override bool TryJoin(UndoManager<Document> UndoManager, int thisIndex)
+    public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
     {
         return false;
     }
-    public override Paragraph Split(UndoManager<Document> UndoManager, int splitIndex)
+    public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
     {
         return null!;
     }
 
-    public override void SetStyleContinuingFrom(Paragraph other)
-    {
+    protected override float ContentWidthOverride => Children.Max(x => x.ContentWidth);
 
-    }
-    /// <inheritdoc />
-    public override float ContentWidth => Children.Max(x => x.ContentWidth);
-
-    /// <inheritdoc />
-    public override float ContentHeight => Children.Sum(x => x.ContentHeight);
+    protected override float ContentHeightOverride => Children.Sum(x => x.ContentHeight) + _Spacing * Math.Max(0, Children.Count - 1);
 }

@@ -18,7 +18,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     const int NumberRightMargin = 10;
     public override IStyle StartStyle => Children[0].StartStyle;
     public override IStyle EndStyle => Children[^1].StartStyle;
-    public List<Paragraph> Children { get; }
+    protected List<Paragraph> Children { get; }
 
     /// <summary>
     /// Constructs a new TextParagraph
@@ -35,6 +35,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     public override void Paint(SKCanvas canvas, PaintOptions options)
     {
         options = options with { TextPaintOptions = options.TextPaintOptions.Clone() };
+
         foreach (var para in Children)
         {
             var drawingPos = para.GlobalInfo.ContentPosition;
@@ -49,7 +50,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         AfterPaint:
             if (options.TextPaintOptions.Selection is not null)
             {
-                options.TextPaintOptions.Selection = options.TextPaintOptions.Selection.Value.Offset(-para.Length);
+                options.TextPaintOptions.Selection = options.TextPaintOptions.Selection.Value.Offset(-para.CodePointLength);
             }
         }
     }
@@ -111,7 +112,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     }
 
     /// <inheritdoc />
-    public override int Length => Children.Sum(x => x.Length);
+    public override int CodePointLength => Children.Sum(x => x.CodePointLength);
 
     public override int LineCount => Children.Sum(x => x.LineCount);
 
@@ -126,12 +127,12 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         foreach (var para in Children)
         {
             if (r.Start.Equals(r.End)) return;
-            if (r.Start.Value > para.Length)
+            if (r.Start.Value > para.CodePointLength)
             {
-                r = (r.Start.Value - para.Length)..(r.End.Value - para.Length);
+                r = (r.Start.Value - para.CodePointLength)..(r.End.Value - para.CodePointLength);
                 continue;
             }
-            var len = Math.Min(r.End.Value - r.Start.Value, para.Length - r.Start.Value);
+            var len = Math.Min(r.End.Value - r.Start.Value, para.CodePointLength - r.Start.Value);
             para.GetTextByAppendTextToBuffer(bufToAdd, r.Start.Value, len);
             r = 0..(r.End.Value - r.Start.Value - len);
         }
@@ -149,12 +150,12 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         foreach (var para in Children)
         {
             if (r.Start.Equals(r.End)) yield break;
-            if (r.Start.Value > para.Length)
+            if (r.Start.Value > para.CodePointLength)
             {
-                r = (r.Start.Value - para.Length)..(r.End.Value - para.Length);
+                r = (r.Start.Value - para.CodePointLength)..(r.End.Value - para.CodePointLength);
                 continue;
             }
-            var len = Math.Min(r.End.Value - r.Start.Value, para.Length);
+            var len = Math.Min(r.End.Value - r.Start.Value, para.CodePointLength);
             para.GetStyles(r.Start.Value, len);
             r = 0..(r.End.Value - r.Start.Value - len);
         }
@@ -166,12 +167,12 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         foreach (var para in Children)
         {
             if (r.Start.Equals(r.End)) return;
-            if (r.Start.Value > para.Length)
+            if (r.Start.Value > para.CodePointLength)
             {
-                r = (r.Start.Value - para.Length)..(r.End.Value - para.Length);
+                r = (r.Start.Value - para.CodePointLength)..(r.End.Value - para.CodePointLength);
                 continue;
             }
-            var len = Math.Min(r.End.Value - r.Start.Value, para.Length);
+            var len = Math.Min(r.End.Value - r.Start.Value, para.CodePointLength);
             para.ApplyStyle(style, r.Start.Value, len);
             r = 0..(r.End.Value - r.Start.Value - len);
         }

@@ -152,7 +152,7 @@ namespace Get.RichTextKit
         /// <summary>
         /// Gets the end of the range as a caret position
         /// </summary>
-        public CaretPosition CaretPosition
+        public CaretPosition EndCaretPosition
         {
             get
             {

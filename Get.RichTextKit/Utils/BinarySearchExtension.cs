@@ -27,7 +27,7 @@ namespace Get.RichTextKit.Utils
     /// </summary>
     public static class BinarySearchExtension
     {
-        private static int GetMedian(int low, int hi)
+        internal static int GetMedian(int low, int hi)
         {
             System.Diagnostics.Debug.Assert(low <= hi);
             System.Diagnostics.Debug.Assert( hi - low >= 0, "Length overflow!");

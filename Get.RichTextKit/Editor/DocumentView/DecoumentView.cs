@@ -1,6 +1,4 @@
 ﻿using Get.EasyCSharp;
-using Get.RichTextKit.Editor;
-using Get.RichTextKit.Editor.DocumentView;
 using SkiaSharp;
 using System;
 using System.ComponentModel;
@@ -32,7 +30,7 @@ public partial class DocumentView : INotifyPropertyChanged
     public void RequestRedraw() => RedrawRequested?.Invoke(this);
     public void Paint(SKCanvas canvas, SKColor textDefaultColor)
     {
-        OwnerDocument.Paint(canvas, new(XScroll, YScroll, ViewHeight, ViewWidth), new()
+        OwnerDocument.Paint(canvas, new(XScroll, YScroll, ViewWidth, ViewHeight), new()
         {
             Selection = Selection.Range,
             SelectionColor = _SelectionColor,
@@ -112,6 +110,13 @@ public partial class DocumentView : INotifyPropertyChanged
         set
         {
             UpdateScroll(value);
+        }
+    }
+    public void InvokeUpdateInfo(DocumentViewUpdateInfo info)
+    {
+        if (info.NewSelection.HasValue)
+        {
+            Selection.Range = info.NewSelection.Value;
         }
     }
 }

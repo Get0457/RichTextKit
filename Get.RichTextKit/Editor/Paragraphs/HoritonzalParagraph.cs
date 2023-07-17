@@ -7,6 +7,7 @@ using System.Reflection;
 using Get.RichTextKit;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
+using Get.RichTextKit.Editor.DocumentView;
 
 namespace Get.RichTextKit.Editor.Paragraphs.Panel;
 
@@ -21,6 +22,7 @@ public class HorizontalParagraph : PanelParagraph
             Children.Add(new VerticalParagraph(style));
         }
     }
+    public new List<Paragraph> Children => base.Children;
 
     protected override Paragraph GetParagraphAt(PointF pt)
         => FindClosestX(pt.X);
@@ -37,34 +39,29 @@ public class HorizontalParagraph : PanelParagraph
         {
             child.Layout(parentInfo);
             child.LocalInfo = new(
-                ContentPosition: new(XOffset + Padding.Left, Padding.Top),
+                ContentPosition: OffsetMargin(new(XOffset + Padding.Left, Padding.Top), child.Margin),
                 CodePointIndex: cpiOffset,
                 DisplayLineIndex: 0,
                 LineIndex: lineOffset
             );
             XOffset += _childWidth;
-            cpiOffset += child.Length;
+            cpiOffset += child.CodePointLength;
             lineOffset += child.LineCount;
         }
     }
     public override int DisplayLineCount => 1;
 
-    public override void DeletePartial(UndoManager<Document> UndoManager, SubRunRecursiveInfo range)
+    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range)
     {
         //UndoManager.Do(new UndoDeleteText(_textBlock, range.Offset, range.Length));
     }
-    public override bool TryJoin(UndoManager<Document> UndoManager, int thisIndex)
+    public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
     {
         return false;
     }
-    public override Paragraph Split(UndoManager<Document> UndoManager, int splitIndex)
+    public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
     {
         return null!;
-    }
-
-    public override void SetStyleContinuingFrom(Paragraph other)
-    {
-        
     }
     public override HitTestResult HitTestLine(int lineIndex, float x)
     {
@@ -82,11 +79,9 @@ public class HorizontalParagraph : PanelParagraph
         para.LocalInfo.OffsetFromThis(ref info);
         return info;
     }
-    /// <inheritdoc />
-    public override float ContentWidth => Children.Sum(x => x.ContentWidth + Padding.Left + Padding.Right);
+    protected override float ContentWidthOverride => Children.Sum(x => x.ContentWidth + Padding.Left + Padding.Right);
 
-    /// <inheritdoc />
-    public override float ContentHeight => Children.Max(x => x.ContentHeight) + Padding.Bottom + Padding.Top;
+    protected override float ContentHeightOverride => Children.Max(x => x.ContentHeight) + Padding.Bottom + Padding.Top;
 
     public override void Paint(SKCanvas canvas, PaintOptions options)
     {

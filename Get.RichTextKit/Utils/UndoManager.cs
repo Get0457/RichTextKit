@@ -10,7 +10,7 @@ namespace Get.RichTextKit.Utils
     /// Implements an manager for undo operations
     /// </summary>
     /// <typeparam name="T">A context object type (eg: document type)</typeparam>
-    public class UndoManager<T>
+    public class UndoManager<T, TInfo>
     {
         /// <summary>
         /// Constructs a new undo manager
@@ -26,7 +26,7 @@ namespace Get.RichTextKit.Utils
         /// Execute an undo unit and add it to the manager 
         /// </summary>
         /// <param name="unit">The undo unit to execute</param>
-        public void Do(UndoUnit<T> unit)
+        public void Do(UndoUnit<T, TInfo> unit)
         {
             // Only if not blocked
             if (IsBlocked)
@@ -60,12 +60,12 @@ namespace Get.RichTextKit.Utils
         /// <summary>
         /// Undoes the last performed operation
         /// </summary>
-        public void Undo()
+        public void Undo(Action<TInfo> infoCallback)
         {
             // Check if can
             if (!CanUndo)
                 return;
-
+            NotifyInfo += infoCallback;
             // Remember if was modified
             bool wasModified = IsModified;
 
@@ -89,16 +89,18 @@ namespace Get.RichTextKit.Utils
             // Fire modified event
             if (wasModified != IsModified)
                 OnModifiedChanged();
+            NotifyInfo -= infoCallback;
         }
 
         /// <summary>
         /// Redoes previously undone operations
         /// </summary>
-        public void Redo()
+        public void Redo(Action<TInfo> infoCallback)
         {
             // Check if can
             if (!CanRedo)
                 return;
+            NotifyInfo += infoCallback;
 
             // Remember if modified
             bool wasModified = IsModified;
@@ -123,6 +125,7 @@ namespace Get.RichTextKit.Utils
             // Fire modified event
             if (wasModified != IsModified)
                 OnModifiedChanged();
+            NotifyInfo -= infoCallback;
         }
 
         /// <summary>
@@ -132,7 +135,7 @@ namespace Get.RichTextKit.Utils
         /// <returns>An IDisposable that when disposed will close the group</returns>
         public IDisposable OpenGroup(string description)
         {
-            return OpenGroup(new UndoGroup<T>(description));
+            return OpenGroup(new UndoGroup<T, TInfo>(description));
         }
 
         /// <summary>
@@ -140,7 +143,7 @@ namespace Get.RichTextKit.Utils
         /// </summary>
         /// <param name="group">The UndoGroup to be used</param>
         /// <returns>An IDisposable that when disposed will close the group</returns>
-        public IDisposable OpenGroup(UndoGroup<T> group)
+        public IDisposable OpenGroup(UndoGroup<T, TInfo> group)
         {
             if (IsBlocked)
                 throw new InvalidOperationException("Attempt to add undo group while blocked");
@@ -195,6 +198,10 @@ namespace Get.RichTextKit.Utils
         /// </summary>
         public void Clear()
         {
+            foreach (var unit in _units)
+            {
+                unit.OnNotifyInfo -= OnNotifyInfo;
+            }
             _units.Clear();
             _currentPos = 0;
             _unmodifiedPos = -1;
@@ -264,6 +271,8 @@ namespace Get.RichTextKit.Utils
         /// </summary>
         public event Action EndOperation;
 
+        public event Action<TInfo> NotifyInfo;
+
         /// <summary>
         /// Fired when the modified state of the document changes
         /// </summary>
@@ -316,7 +325,7 @@ namespace Get.RichTextKit.Utils
         /// Get the current unsealed unit
         /// </summary>
         /// <returns>The unsealed unit if available, otherwise null</returns>
-        public UndoUnit<T> GetUnsealedUnit()
+        public UndoUnit<T, TInfo> GetUnsealedUnit()
         {
             // Don't allow coalescing while we have open groups.
             if (_openGroups.Count > 0)
@@ -337,7 +346,7 @@ namespace Get.RichTextKit.Utils
         /// Retrieves the unit that would be executed on Undo
         /// </summary>
         /// <returns>An UndoUnit, or null</returns>
-        public UndoUnit<T> GetUndoUnit()
+        public UndoUnit<T, TInfo> GetUndoUnit()
         {
             if (_currentPos > 0)
                 return _units[_currentPos - 1];
@@ -349,7 +358,7 @@ namespace Get.RichTextKit.Utils
         /// Retrieves the unit that would be executed on Redo
         /// </summary>
         /// <returns>An UndoUnit, or null</returns>
-        public UndoUnit<T> GetRedoUnit()
+        public UndoUnit<T, TInfo> GetRedoUnit()
         {
             if (_currentPos < _units.Count)
                 return _units[_currentPos];
@@ -381,12 +390,18 @@ namespace Get.RichTextKit.Utils
             ModifiedChanged?.Invoke();
         }
 
+        protected virtual void OnNotifyInfo(TInfo info)
+        {
+            NotifyInfo?.Invoke(info);
+        }
+
         /// <summary>
         /// Adds a unit to the undo manager without executing it
         /// </summary>
         /// <param name="unit">The UndoUnit to add</param>
-        void Add(UndoUnit<T> unit)
+        void Add(UndoUnit<T, TInfo> unit)
         {
+            unit.OnNotifyInfo += OnNotifyInfo;
             if (IsBlocked)
                 throw new InvalidOperationException("Attempt to add undo operation while blocked");
 
@@ -407,6 +422,7 @@ namespace Get.RichTextKit.Utils
                         _unmodifiedPos--;
 
                     // Remove
+                    _units[0].OnNotifyInfo -= OnNotifyInfo;
                     _units.RemoveAt(0);
                 }
                 else
@@ -433,6 +449,7 @@ namespace Get.RichTextKit.Utils
             // Remove redo units
             while (_currentPos < _units.Count)
             {
+                _units[_currentPos].OnNotifyInfo -= OnNotifyInfo;
                 _units.RemoveAt(_currentPos);
             }
 
@@ -473,7 +490,7 @@ namespace Get.RichTextKit.Utils
         /// <summary>
         /// Get the currently undo group
         /// </summary>
-        UndoGroup<T> CurrentGroup
+        UndoGroup<T, TInfo> CurrentGroup
         {
             get
             {
@@ -486,12 +503,12 @@ namespace Get.RichTextKit.Utils
 
         class GroupDisposer : IDisposable
         {
-            public GroupDisposer(UndoManager<T> owner)
+            public GroupDisposer(UndoManager<T, TInfo> owner)
             {
                 _owner = owner;
             }
 
-            UndoManager<T> _owner;
+            UndoManager<T, TInfo?> _owner;
 
             public void Dispose()
             {
@@ -501,8 +518,8 @@ namespace Get.RichTextKit.Utils
 
         // Private members
         T _context;
-        List<UndoUnit<T>> _units = new List<UndoUnit<T>>();
-        Stack<UndoGroup<T>> _openGroups = new Stack<UndoGroup<T>>();
+        List<UndoUnit<T, TInfo>> _units = new List<UndoUnit<T, TInfo>>();
+        Stack<UndoGroup<T, TInfo>> _openGroups = new Stack<UndoGroup<T, TInfo>>();
         int _currentPos;
         int _unmodifiedPos;
         int _maxUnits;
@@ -515,8 +532,11 @@ namespace Get.RichTextKit.Utils
     /// Base class for all undo units
     /// </summary>
     /// <typeparam name="T">The document context type</typeparam>
-    public abstract class UndoUnit<T>
+    public abstract class UndoUnit<T, TInfo>
     {
+        public event Action<TInfo>? OnNotifyInfo;
+        protected void NotifyInfo(TInfo info) => OnNotifyInfo?.Invoke(info);
+
         /// <summary>
         /// Constructs a new UndoUnit
         /// </summary>
@@ -586,7 +606,7 @@ namespace Get.RichTextKit.Utils
         /// <remarks>
         /// Will be null if the undo unit isn't within a group operation
         /// </remarks>
-        public UndoGroup<T> Group { get; set; }
+        public UndoGroup<T, TInfo> Group { get; set; }
 
         // Private members
         string? _description;
@@ -599,7 +619,7 @@ namespace Get.RichTextKit.Utils
     /// into a single operation
     /// </summary>
     /// <typeparam name="T">The document context type</typeparam>
-    public class UndoGroup<T> : UndoUnit<T>
+    public class UndoGroup<T, TInfo> : UndoUnit<T, TInfo>
     {
         /// <summary>
         /// Constructs a new UndoGroup with a description
@@ -629,9 +649,10 @@ namespace Get.RichTextKit.Utils
         /// Adds a unit to this group
         /// </summary>
         /// <param name="unit">The UndoUnit to be added</param>
-        public void Add(UndoUnit<T> unit)
+        public void Add(UndoUnit<T, TInfo> unit)
         {
             unit.Group = this;
+            unit.OnNotifyInfo += NotifyInfo;
             _units.Add(unit);
         }
 
@@ -640,16 +661,17 @@ namespace Get.RichTextKit.Utils
         /// </summary>
         /// <param name="position">The position at which the unit should be inserted</param>
         /// <param name="unit">The UndoUnit to be inserted</param>
-        public void Insert(int position, UndoUnit<T> unit)
+        public void Insert(int position, UndoUnit<T, TInfo> unit)
         {
             unit.Group = this;
+            unit.OnNotifyInfo += NotifyInfo;
             _units.Insert(position, unit);
         }
 
         /// <summary>
         /// Gets the last UndoUnit in this group
         /// </summary>
-        public UndoUnit<T>? LastUnit
+        public UndoUnit<T, TInfo>? LastUnit
         {
             get
             {
@@ -663,7 +685,7 @@ namespace Get.RichTextKit.Utils
         /// <summary>
         /// Get the list of units in this group
         /// </summary>
-        public IReadOnlyList<UndoUnit<T>> Units => _units;
+        public IReadOnlyList<UndoUnit<T, TInfo>> Units => _units;
 
         /// <summary>
         /// The method on the UndoGroup class is never called by the 
@@ -687,14 +709,14 @@ namespace Get.RichTextKit.Utils
         /// <inheritdoc />
         public override void Undo(T context)
         {
-            foreach (var u in _units.Reverse<UndoUnit<T>>())
+            foreach (var u in _units.Reverse<UndoUnit<T, TInfo>>())
             {
                 u.Undo(context);
             }
         }
 
         // Private members
-        List<UndoUnit<T>> _units = new List<UndoUnit<T>>();
+        List<UndoUnit<T, TInfo>> _units = new List<UndoUnit<T, TInfo>>();
     }
 
 }

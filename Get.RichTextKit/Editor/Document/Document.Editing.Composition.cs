@@ -70,6 +70,6 @@ public partial class DocumentEditor
     /// </summary>
     public void FinishImeComposition()
     {
-        Document.UndoManager.Undo();
+        Document.UndoManager.Undo(delegate { });
     }
 }

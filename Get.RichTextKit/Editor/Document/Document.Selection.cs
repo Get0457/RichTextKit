@@ -118,7 +118,7 @@ public partial class Document
             // Create text range covering the entire paragraph
             return new TextRange(
                 para.GlobalInfo.CodePointIndex,
-                para.GlobalInfo.CodePointIndex + para.Length - 1,
+                para.GlobalInfo.CodePointIndex + para.CodePointLength - 1,
                 true
             );
         }

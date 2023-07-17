@@ -25,6 +25,7 @@ using Get.RichTextKit;
 using Get.RichTextKit.Editor;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
+using Get.RichTextKit.Editor.Paragraphs.Panel;
 
 namespace Get.RichTextKit.Editor;
 
@@ -109,7 +110,7 @@ public partial class DocumentEditor
 
         if (styleToUse is null)
         {
-            styleToUse = Document.GetStyleAtPosition(range.CaretPosition);
+            styleToUse = Document.GetStyleAtPosition(range.EndCaretPosition);
             if (styleToUse is IDoNotCombineStyle)
             {
                 styleToUse = new CopyStyle(styleToUse);
@@ -203,21 +204,16 @@ public partial class DocumentEditor
     /// <summary>
     /// Delete a section of the document
     /// </summary>
-    /// <remarks>
-    /// Returns the index of the first paragraph affected
-    /// </remarks>
     /// <param name="range">The range to be deleted</param>
-    int DeleteInternal(TextRange range)
+    void DeleteInternal(TextRange range)
     {
         // Iterate over the sections to be deleted
+        IParagraphCollection? joinParent = null;
         int joinParagraph = -1;
-        int firstParagraph = -1;
         foreach (var subRun in Document.Paragraphs.GetIntersectingRunsRecursiveReverse(range.Start, range.Length))
         {
             Debug.Assert(joinParagraph == -1);
-
-            firstParagraph = subRun.Index;
-
+            
             // Is it a partial paragraph deletion?
             if (subRun.Partial)
             {
@@ -230,7 +226,7 @@ public partial class DocumentEditor
                 // of this paragraph then remember this paragraph needs to 
                 // be joined with the next paragraph after any intervening 
                 // paragraphs have been deleted
-                if (subRun.Offset + subRun.Length >= para.Length)
+                if (subRun.Offset + subRun.Length >= para.CodePointLength)
                 {
                     // If deleting paragraph at the end, do not delete
                     if (!(subRun.Index >= 0 && subRun.Index + 1 < subRun.Parent.Paragraphs.Count))
@@ -239,6 +235,7 @@ public partial class DocumentEditor
                     }
                     Debug.Assert(joinParagraph == -1);
                     joinParagraph = subRun.Index;
+                    joinParent = subRun.Parent;
                 }
 
                 // Delete the text
@@ -264,19 +261,17 @@ public partial class DocumentEditor
 
         // If the deletion started mid paragraph and crossed into
         // subsequent paragraphs then we need to join the paragraphs
-        if (joinParagraph >= 0 && joinParagraph + 1 < Document.Paragraphs.Count)
+        if (joinParagraph >= 0 && joinParagraph + 1 < joinParent.Paragraphs.Count)
         {
             // Get both paragraphs
-            var firstPara = Document.Paragraphs[joinParagraph];
-            var secondPara = Document.Paragraphs[joinParagraph + 1];
+            var firstPara = joinParent.Paragraphs[joinParagraph];
+            var secondPara = joinParent.Paragraphs[joinParagraph + 1];
 
             firstPara.TryJoin(Document.UndoManager, joinParagraph);
         }
 
         // Layout is now invalid
         Document.Layout.EnsureValid();
-
-        return firstParagraph;
     }
 
     //void NewDeleteInternal(TextRange range)
@@ -337,9 +332,9 @@ public partial class DocumentEditor
             var firstPart = parts[0];
             if (firstPart.Length != 0)
             {
-                if (paraA is ITextParagraph tp)
+                if (paraA is ITextParagraph)
                     Document.UndoManager.Do(new UndoInsertText(
-                        tp.TextBlock,
+                        paraA.GlobalInfo.CodePointIndex,
                         indexInParagraph,
                         text.Extract(firstPart.Offset, firstPart.Length)
                     ));
@@ -351,8 +346,8 @@ public partial class DocumentEditor
             var lastPart = parts[parts.Length - 1];
             if (lastPart.Length != 0)
             {
-                if (paraB is ITextParagraph tp)
-                    Document.UndoManager.Do(new UndoInsertText(tp.TextBlock, 0, text.Extract(lastPart.Offset, lastPart.Length)));
+                if (paraB is ITextParagraph)
+                    Document.UndoManager.Do(new UndoInsertText(paraB.GlobalInfo.CodePointIndex, 0, text.Extract(lastPart.Offset, lastPart.Length)));
                 else endingAppendingIdx = parts.Length;
             }
 
@@ -377,7 +372,7 @@ public partial class DocumentEditor
             {
                 if (tp.TextBlock.Length == indexInParagraph)
                     indexInParagraph--;
-                Document.UndoManager.Do(new UndoInsertText(tp.TextBlock, indexInParagraph, text));
+                Document.UndoManager.Do(new UndoInsertText(para.GlobalInfo.CodePointIndex, indexInParagraph, text));
             }
             else
             {
@@ -402,9 +397,9 @@ public partial class DocumentEditor
             return range;
 
         float? unused = null;
-        var nextPos = Navigate(range.CaretPosition, NavigationKind.CharacterRight, default, ref unused);
+        var nextPos = Navigate(range.EndCaretPosition, NavigationKind.CharacterRight, default, ref unused);
 
-        var paraThis = Document.Paragraphs.FromCodePointIndexAsIndex(range.CaretPosition, out var _);
+        var paraThis = Document.Paragraphs.FromCodePointIndexAsIndex(range.EndCaretPosition, out var _);
         var paraNext = Document.Paragraphs.FromCodePointIndexAsIndex(nextPos, out var _);
 
         if (paraThis == paraNext && nextPos.CodePointIndex < Document.Layout.Length)

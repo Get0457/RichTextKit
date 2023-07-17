@@ -35,6 +35,7 @@ The original version of this file can be found at https://github.com/toptensoftw
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="System.Memory" Version="4.5.5" />
 	</ItemGroup>
 
 	<ItemGroup>

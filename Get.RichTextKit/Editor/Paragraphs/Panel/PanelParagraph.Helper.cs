@@ -57,7 +57,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         {
             if (a < para.LocalInfo.CodePointIndex)
                 return 1;
-            if (a >= para.LocalInfo.CodePointIndex + para.Length)
+            if (a >= para.LocalInfo.CodePointIndex + para.CodePointLength)
                 return -1;
             return 0;
         });
@@ -74,12 +74,12 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         if (indexInParagraph == 0 && position.AltPosition && paraIndex > 0)
         {
             paraIndex--;
-            indexInParagraph = Children[paraIndex].Length;
+            indexInParagraph = Children[paraIndex].CodePointLength;
         }
 
         // Clamp to end of paragraph
-        if (indexInParagraph > Children[paraIndex].Length)
-            indexInParagraph = Children[paraIndex].Length;
+        if (indexInParagraph > Children[paraIndex].CodePointLength)
+            indexInParagraph = Children[paraIndex].CodePointLength;
 
         // Done
         return paraIndex;
@@ -127,8 +127,8 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         lineIndexInParagraph = line - Children[paraIndex].LocalInfo.LineIndex;
 
         // Clamp to end of paragraph
-        if (lineIndexInParagraph > Children[paraIndex].Length)
-            lineIndexInParagraph = Children[paraIndex].Length;
+        if (lineIndexInParagraph > Children[paraIndex].CodePointLength)
+            lineIndexInParagraph = Children[paraIndex].CodePointLength;
 
         // Done
         return paraIndex;
@@ -232,5 +232,9 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
 
         // Return the paragraph
         return Children[paraIndex];
+    }
+    protected static PointF OffsetMargin(PointF pt, Thickness margin)
+    {
+        return new(pt.X + margin.Left, pt.Y + margin.Top);
     }
 }

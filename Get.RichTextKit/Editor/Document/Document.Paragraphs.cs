@@ -36,7 +36,6 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
     readonly Document Document;
 
     IList<Paragraph> IParagraphCollection.Paragraphs => this;
-    bool initialized;
     internal DocumentParagraphs(Document owner)
     {
         Document = owner;
@@ -76,7 +75,7 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
         {
             if (a < para.GlobalInfo.CodePointIndex)
                 return 1;
-            if (a >= para.GlobalInfo.CodePointIndex + para.Length)
+            if (a >= para.GlobalInfo.CodePointIndex + para.CodePointLength)
                 return -1;
             return 0;
         });
@@ -93,12 +92,12 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
         if (indexInParagraph == 0 && position.AltPosition && paraIndex > 0)
         {
             paraIndex--;
-            indexInParagraph = this[paraIndex].Length;
+            indexInParagraph = this[paraIndex].CodePointLength;
         }
 
         // Clamp to end of paragraph
-        if (indexInParagraph > this[paraIndex].Length)
-            indexInParagraph = this[paraIndex].Length;
+        if (indexInParagraph > this[paraIndex].CodePointLength)
+            indexInParagraph = this[paraIndex].CodePointLength;
 
        System.Diagnostics.Debug.Assert(indexInParagraph >= 0);
 
@@ -209,7 +208,7 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
         {
             if (r.LocalInfo.CodePointIndex >= a)
                 return 1;
-            if (r.LocalInfo.CodePointIndex + r.Length < a)
+            if (r.LocalInfo.CodePointIndex + r.CodePointLength < a)
                 return -1;
             return 0;
         });
@@ -222,10 +221,10 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
             var para = paragraphs[i];
 
             // Quit if past requested run
-            if (para.LocalInfo.CodePointIndex + para.Length <= offset)
+            if (para.LocalInfo.CodePointIndex + para.CodePointLength <= offset)
                 break;
             var srOffset = para.LocalInfo.CodePointIndex > offset ? 0 : offset - para.LocalInfo.CodePointIndex;
-            var srLength = Math.Min(para.LocalInfo.CodePointIndex + para.Length, to) - para.LocalInfo.CodePointIndex - srOffset;
+            var srLength = Math.Min(para.LocalInfo.CodePointIndex + para.CodePointLength, to) - para.LocalInfo.CodePointIndex - srOffset;
             
 
             if (para is IParagraphPanel panel)
@@ -242,7 +241,7 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
                     Index: i,
                     Offset: srOffset,
                     Length: srLength,
-                    Partial: para.Length != srLength
+                    Partial: para.CodePointLength != srLength
                 );
             }
         }
