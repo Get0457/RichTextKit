@@ -217,7 +217,7 @@ public partial class DocumentViewController
         using (DocumentView.OwnerDocument.UndoManager.OpenGroup("Insert New Paragraph"))
         {
             Type(Document.NewParagraphSeparator.ToString());
-            DocumentView.OwnerDocument.Paragraphs.GlobalFromCodePointIndex(DocumentView.Selection.Range.EndCaretPosition, out var parent, out var paragraphIndex, out _);
+            DocumentView.OwnerDocument.Paragraphs.GlobalChildrenFromCodePointIndex(DocumentView.Selection.Range.EndCaretPosition, out var parent, out var paragraphIndex, out _);
             DocumentView.OwnerDocument.UndoManager.Do(new UndoInsertParagraph(parent, paragraphIndex, paragraph));
             DocumentView.OwnerDocument.Layout.Invalidate();
             DocumentView.OwnerDocument.Layout.EnsureValid();

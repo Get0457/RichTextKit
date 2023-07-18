@@ -2,7 +2,7 @@
 
 namespace Get.RichTextKit.Editor.Paragraphs;
 
-public record struct ParentInfo(float AvaliableWidth, bool LineWrap, bool LineNumberMode)
+public record struct LayoutParentInfo(float AvaliableWidth, bool LineWrap, bool LineNumberMode)
 {
 
 }

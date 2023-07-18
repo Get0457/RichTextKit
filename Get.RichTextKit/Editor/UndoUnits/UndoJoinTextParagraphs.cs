@@ -14,7 +14,7 @@ class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
 
     public override void Do(Document context)
     {
-        var firstPara = context.Paragraphs.GlobalFromCodePointIndex(new(_paragraphCodePointIndex), out var parent, out var _paragraph, out var cpi);
+        var firstPara = context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_paragraphCodePointIndex), out var parent, out var _paragraph, out var cpi);
         var secondPara = parent.Paragraphs[_paragraph + 1];
 
         // Remember what we need to undo
@@ -40,7 +40,7 @@ class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
     public override void Undo(Document context)
     {
         // Delete the joined text from the first paragraph
-        var firstPara = context.Paragraphs.GlobalFromCodePointIndex(new(_paragraphCodePointIndex), out var parent, out var _paragraph, out var cpi);
+        var firstPara = context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_paragraphCodePointIndex), out var parent, out var _paragraph, out var cpi);
         if (firstPara is ITextParagraph firstTextPara)
             firstTextPara.TextBlock.DeleteText(_splitPoint, firstTextPara.TextBlock.Length - _splitPoint);
         else Debugger.Break();

@@ -47,8 +47,8 @@ public class UndoParagraphSetting<T> : UndoUnit<Document, DocumentViewUpdateInfo
         {
             if (ConfirmSetStyle(para)) return true;
         }
-        var idx1 = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(parent.Paragraphs.AsReadOnly(), range.StartCaretPosition, out int cpi1);
-        var idx2 = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(parent.Paragraphs.AsReadOnly(), range.EndCaretPosition, out int cpi2);
+        var idx1 = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(parent.Paragraphs.AsIReadOnlyList(), range.StartCaretPosition, out int cpi1);
+        var idx2 = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(parent.Paragraphs.AsIReadOnlyList(), range.EndCaretPosition, out int cpi2);
         bool success = false;
         if (idx1 == idx2)
         {

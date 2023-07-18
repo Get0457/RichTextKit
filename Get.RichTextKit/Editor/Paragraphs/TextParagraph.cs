@@ -63,7 +63,7 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     bool LineNumberMode = false;
 
     /// <inheritdoc />
-    protected override void LayoutOverride(ParentInfo owner)
+    protected override void LayoutOverride(LayoutParentInfo owner)
     {
         LineNumberMode = owner.LineNumberMode;
         _textBlock.RenderWidth = owner.AvaliableWidth - (LineNumberMode ? NumberLineOffset : 0);
@@ -170,7 +170,7 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     // Private attributes
     readonly TextBlock _textBlock;
 
-    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range)
+    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
     {
         if (range.Offset + range.Length >= /* last index */ _textBlock.Length)
             range = range with { Length = _textBlock.Length - range.Offset };

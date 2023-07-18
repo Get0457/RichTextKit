@@ -2,7 +2,7 @@
 using System.Diagnostics;
 
 namespace Get.RichTextKit.Editor.DataStructure.Table;
-[DebuggerDisplay("Count = {Count}")]
+[DebuggerDisplay("Column (Count = {Count})")]
 public readonly struct TableColumn<T> : IReadOnlyList<T>, ITableOwner<T>
 {
     internal TableColumn(ITable<T> instance, int rowIndex)

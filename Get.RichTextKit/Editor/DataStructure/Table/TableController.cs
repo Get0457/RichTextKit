@@ -2,10 +2,6 @@
 
 public partial class TableController<T>
 {
-    void A()
-    {
-        
-    }
     public T this[int rowIndex, int colIndex] { get => Target[rowIndex, colIndex]; set => Target[rowIndex, colIndex] = value; }
     public TableRow<T> this[int rowIndex] { get => Rows[rowIndex]; set => Rows[rowIndex] = value; }
     public TableRowManager<T> Rows { get; }

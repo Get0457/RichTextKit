@@ -1,6 +1,8 @@
-﻿namespace Get.RichTextKit.Editor.Paragraphs.Panel;
+﻿using Get.RichTextKit.Editor.Structs;
 
-public interface IParagraphCollection
+namespace Get.RichTextKit.Editor.Paragraphs.Panel;
+
+public interface IParagraphCollection : IParentOrParagraph
 {
     bool IsChildrenReadOnly { get; }
     IList<Paragraph> Paragraphs { get; }

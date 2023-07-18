@@ -1,14 +1,19 @@
 ﻿using Get.RichTextKit.Editor.Paragraphs.Panel;
+using Get.RichTextKit.Utils;
 
 namespace Get.RichTextKit.Editor.Structs;
+public interface IParentOrParagraph
+{
 
+}
 public readonly record struct SelectionInfo(
     TextRange OriginalRange,
     TextRange? NewSelection,
     CaretInfo StartCaretInfo,
     CaretInfo EndCaretInfo,
-    IParagraphCollection SelectionInfoProvider,
-    IEnumerable<SubRunRecursiveInfo> InteractingRuns
+    IParentOrParagraph SelectionInfoProvider,
+    IEnumerable<SubRunInfo> InteractingRuns,
+    IEnumerable<SubRunInfo> RecursiveInteractingRuns
 )
 {
     public bool IsSelectionChanged => NewSelection.HasValue;

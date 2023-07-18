@@ -15,5 +15,5 @@ readonly record struct ReadOnlyListWrapper<T>(IList<T> List) : IReadOnlyList<T>
 }
 public static partial class Extension
 {
-    public static IReadOnlyList<T> AsReadOnly<T>(this IList<T> list) => new ReadOnlyListWrapper<T>(list);
+    public static IReadOnlyList<T> AsIReadOnlyList<T>(this IList<T> list) => new ReadOnlyListWrapper<T>(list);
 }

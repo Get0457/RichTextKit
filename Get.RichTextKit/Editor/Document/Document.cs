@@ -35,6 +35,7 @@ public partial class Document
     /// </summary>
     public Document(IStyle DefaultStyle)
     {
+        rootParagraph = new(DefaultStyle);
         // Create paragraph list
         UndoManager = new(this);
         Paragraphs = new(this);
@@ -44,10 +45,6 @@ public partial class Document
         // Create our undo manager
         UndoManager = new UndoManager<Document, DocumentViewUpdateInfo>(this);
         UndoManager.EndOperation += FireDocumentChanged;
-
-        // Temporary... add some text to work with
-        Paragraphs.Add(new TextParagraph(DefaultStyle));
-        
     }
 
     /// <summary>
@@ -70,7 +67,7 @@ public partial class Document
     {
         return
             Paragraphs
-            .FromCodePointIndex(position, out var paraCodePointIndex)
+            .LocalChildrenFromCodePointIndex(position, out var paraCodePointIndex)
             .GetStyleAtPosition(new(paraCodePointIndex));
     }
 
@@ -93,10 +90,10 @@ public partial class Document
 
         // Get all subruns
         var buf = new Utf32Buffer();
-        foreach (var subrun in Paragraphs.GetInterectingRuns(range.Start, range.Length))
+        foreach (var subrun in Paragraphs.GetInteractingRuns(range))
         {
             // Get the paragraph
-            var para = Paragraphs[subrun.Index];
+            var para = subrun.Paragraph;
             
             // Add the text
             para.GetTextByAppendTextToBuffer(buf, subrun.Offset, subrun.Length);

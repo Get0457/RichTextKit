@@ -39,7 +39,7 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
         if (!Range.IsRange)
         {
             CurrentPositionStyle = DocumentView.OwnerDocument.GetStyleAtPosition(Range.EndCaretPosition);
-            CurrentCaretPositionParagraph = DocumentView.OwnerDocument.Paragraphs.GlobalFromCodePointIndex(
+            CurrentCaretPositionParagraph = DocumentView.OwnerDocument.Paragraphs.GlobalChildrenFromCodePointIndex(
                 Range.EndCaretPosition, out var a, out _
             );
             CurrentCaretPositionParent = a;
@@ -95,7 +95,7 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
         base.OnChanged(FormatName);
         PropertyChanged?.Invoke(this, new(FormatName));
     }
-    public IEnumerable<SubRun> InterectingRuns => DocumentView.OwnerDocument.Paragraphs.GetInterectingRuns(Range);
+    public IEnumerable<SubRunInfo> InterectingRuns => DocumentView.OwnerDocument.Paragraphs.GetInteractingRuns(Range);
 
     public override void ApplyStyle(Func<IStyle, IStyle> styleModifier)
     {

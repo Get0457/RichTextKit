@@ -9,6 +9,7 @@ using Get.RichTextKit;
 using HarfBuzzSharp;
 using System.Reflection;
 using Get.RichTextKit.Styles;
+using System.Diagnostics;
 
 namespace Get.RichTextKit.Editor.Paragraphs.Panel;
 
@@ -74,9 +75,9 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     public override HitTestResult HitTest(PointF pt)
     {
         var para = GetParagraphAt(pt);
-        
+
         para.LocalInfo.OffsetToThis(ref pt);
-        
+
         var htr = para.HitTest(pt);
 
         para.LocalInfo.OffsetFromThis(ref htr);
@@ -97,7 +98,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
 
     /// <inheritdoc />
     public override IReadOnlyList<int> WordBoundaryIndicies { get; }
-    
+
     public override LineInfo GetLineInfo(int line)
     {
         var paraIndex = LocalChildrenFromLineIndexAsIndex(line, out var newLineIdx);
@@ -178,5 +179,48 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
             para.ApplyStyle(style, r.Start.Value, len);
             r = 0..(r.End.Value - r.Start.Value - len);
         }
+    }
+    public override SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection)
+    {
+        if (IsWithinTheSameParagraph(selection, out var paraIndex, out var newRange))
+            return Children[paraIndex].GetSelectionInfo(new(this, paraIndex), newRange);
+        else
+            return base.GetSelectionInfo(parentInfo, selection);
+    }
+    protected override IEnumerable<SubRunInfo> GetInteractingRuns(ParentInfo parentInfo, TextRange selection)
+    {
+        var paraIdx1 = LocalChildrenFromCodePointIndexAsIndex(selection.StartCaretPosition, out int cpi1);
+        if (IsWithinTheSameParagraph(selection, out var paraIndex, out var newRange))
+            foreach (var subRun in GetInteractingRuns(Children[paraIndex], new(this, paraIndex), newRange))
+                yield return subRun;
+        else
+            foreach (var subRun in Children.AsIReadOnlyList().LocalGetInterectingRuns(selection.Minimum, selection.Length))
+                yield return new SubRunInfo(new(this, subRun.Index), subRun.Offset, subRun.Length, subRun.Partial);
+    }
+    protected override IEnumerable<SubRunInfo> GetInteractingRunsRecursive(ParentInfo parentInfo, TextRange selection)
+    {
+        if (IsWithinTheSameParagraph(selection, out var paraIndex, out var newRange))
+            foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[paraIndex], new(this, paraIndex), newRange))
+                yield return subRunRecursive;
+        else
+            foreach (var subRun in Children.AsIReadOnlyList().LocalGetInterectingRuns(selection.Minimum, selection.Length))
+            {
+                foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[subRun.Index], parentInfo, new(subRun.Offset, subRun.Offset + subRun.Length)))
+                    yield return subRunRecursive;
+            }
+    }
+    bool IsWithinTheSameParagraph(TextRange range, out int paraIndex, out TextRange newRange)
+    {
+        var paraIdx1 = LocalChildrenFromCodePointIndexAsIndex(range.StartCaretPosition, out int cpi1);
+        var paraIdx2 = LocalChildrenFromCodePointIndexAsIndex(range.EndCaretPosition, out int cpi2);
+        if (paraIdx1 == paraIdx2)
+        {
+            newRange = new(cpi1, cpi2, altPosition: range.AltPosition);
+            paraIndex = paraIdx1;
+            return true;
+        }
+        paraIndex = default;
+        newRange = default;
+        return false;
     }
 }

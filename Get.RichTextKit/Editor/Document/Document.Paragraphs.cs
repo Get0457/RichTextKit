@@ -24,191 +24,66 @@ using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Editor.Paragraphs.Panel;
 using System.Diagnostics;
 using Get.RichTextKit.Styles;
+using Get.RichTextKit.Editor.Structs;
 
 namespace Get.RichTextKit.Editor;
 
 public partial class Document
 {
+    internal readonly VerticalParagraph rootParagraph;
     public DocumentParagraphs Paragraphs { get; }
 }
-public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCollection
+public class DocumentParagraphs : IParagraphCollection
 {
     readonly Document Document;
 
-    IList<Paragraph> IParagraphCollection.Paragraphs => this;
-
+    public Paragraph this[int index] => Document.rootParagraph.Children[index];
+    public int Count => Document.rootParagraph.Children.Count;
+    public void Add(Paragraph paragraph) => Document.rootParagraph.Children.Add(paragraph);
     bool IParagraphCollection.IsChildrenReadOnly => false;
+
+    public IList<Paragraph> Paragraphs => Document.rootParagraph.Children;
 
     internal DocumentParagraphs(Document owner)
     {
         Document = owner;
     }
-    protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
-    {
-        Document.Layout.EnsureValid();
-        base.OnCollectionChanged(e);
-    }
-    /// <summary>
-    /// Given a code point index relative to the document, return which
-    /// paragraph contains that code point and the offset within the paragraph
-    /// </summary>
-    /// <param name="position">The caret position to locate the paragraph for</param>
-    /// <param name="indexInParagraph">Out parameter returning the code point index into the paragraph</param>
-    /// <returns>The index of the paragraph</returns>
-    internal Paragraph FromCodePointIndex(CaretPosition position, out int indexInParagraph)
-    {
-        var a = FromCodePointIndexAsIndex(position, out indexInParagraph);
-        return this[a];
-    }
-    /// <summary>
-    /// Given a code point index relative to the document, return which
-    /// paragraph contains that code point and the offset within the paragraph
-    /// </summary>
-    /// <param name="position">The caret position to locate the paragraph for</param>
-    /// <param name="indexInParagraph">Out parameter returning the code point index into the paragraph</param>
-    /// <returns>The index of the paragraph</returns>
-    internal int FromCodePointIndexAsIndex(CaretPosition position, out int indexInParagraph)
-    {
-        if (position.CodePointIndex < 0) position.CodePointIndex = 0;
-        // Ensure layout is valid
-        Document.Layout.EnsureValid();
+    /// <inheritdoc cref="PanelParagraph.LocalChildrenFromCodePointIndex(CaretPosition, out int)"/>
+    internal Paragraph LocalChildrenFromCodePointIndex(CaretPosition position, out int indexInParagraph)
+        => Document.rootParagraph.LocalChildrenFromCodePointIndex(position, out indexInParagraph);
 
-        // Search paragraphs
-        int paraIndex = this.BinarySearch(position.CodePointIndex, (para, a) =>
-        {
-            if (a < para.GlobalInfo.CodePointIndex)
-                return 1;
-            if (a >= para.GlobalInfo.CodePointIndex + para.CodePointLength)
-                return -1;
-            return 0;
-        });
-        if (paraIndex < 0)
-            paraIndex = ~paraIndex;
-
-        // Clamp to end of document
-        if (paraIndex >= Count)
-            paraIndex = Count - 1;
-
-        // Work out offset within paragraph
-        indexInParagraph = position.CodePointIndex - this[paraIndex].GlobalInfo.CodePointIndex;
-
-        if (indexInParagraph == 0 && position.AltPosition && paraIndex > 0)
-        {
-            paraIndex--;
-            indexInParagraph = this[paraIndex].CodePointLength;
-        }
-
-        // Clamp to end of paragraph
-        if (indexInParagraph > this[paraIndex].CodePointLength)
-            indexInParagraph = this[paraIndex].CodePointLength;
-
-       System.Diagnostics.Debug.Assert(indexInParagraph >= 0);
-
-        // Done
-        return paraIndex;
-    }
-    public Paragraph GlobalFromCodePointIndex(CaretPosition position, out IParagraphCollection parent, out int paragraphIndex, out int codePointindexInParagraph)
-    {
-        paragraphIndex = FromCodePointIndexAsIndex(position, out codePointindexInParagraph);
-        position.CodePointIndex = codePointindexInParagraph;
-        Paragraph obj = this[paragraphIndex];
-        parent = this;
-        while (obj is IParagraphPanel panel)
-        {
-            parent = panel;
-            paragraphIndex = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(new ReadOnlyListWrapper<Paragraph>(panel.Children), position, out codePointindexInParagraph);
-            position.CodePointIndex = codePointindexInParagraph;
-            obj = panel.Children[paragraphIndex];
-        }
-        return obj;
-    }
-    public Paragraph GlobalFromCodePointIndex(CaretPosition position, out IParagraphPanel[] parents, out int codePointindexInParagraph)
-    {
-        var paragraphIndex = FromCodePointIndexAsIndex(position, out codePointindexInParagraph);
-        position.CodePointIndex = codePointindexInParagraph;
-        Paragraph obj = this[paragraphIndex];
-        int codePointindexInParagraph2 = default;
-        IEnumerable<IParagraphPanel> Iterate()
-        {
-            while (obj is IParagraphPanel panel)
-            {
-                yield return panel;
-                paragraphIndex = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(new ReadOnlyListWrapper<Paragraph>(panel.Children), position, out codePointindexInParagraph2);
-                position.CodePointIndex = codePointindexInParagraph2;
-                obj = panel.Children[paragraphIndex];
-            }
-        }
-        codePointindexInParagraph = codePointindexInParagraph2;
-        parents = Iterate().ToArray();
-        return obj;
-    }
+    /// <inheritdoc cref="PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(CaretPosition, out int)"/>
+    internal int LocalChildrenFromCodePointIndexAsIndex(CaretPosition position, out int indexInParagraph)
+        => Document.rootParagraph.LocalChildrenFromCodePointIndexAsIndex(position, out indexInParagraph);
+    public Paragraph GlobalChildrenFromCodePointIndex(CaretPosition position, out IParagraphPanel parent, out int paragraphIndex, out int codePointindexInParagraph)
+        => Document.rootParagraph.GlobalChildrenFromCodePointIndex(position, out parent, out paragraphIndex, out codePointindexInParagraph);
+    public Paragraph GlobalChildrenFromCodePointIndex(CaretPosition position, out IParagraphPanel[] parents, out int codePointindexInParagraph)
+        => Document.rootParagraph.GlobalChildrenFromCodePointIndex(position, out parents, out codePointindexInParagraph);
 
     /// <summary>
     /// Helper to find the closest paragraph to a y-coordinate 
     /// </summary>
     /// <param name="y">Y-Coord to hit test</param>
     /// <returns>A reference to the closest paragraph</returns>
-    internal Paragraph FindClosest(float y)
+    internal Paragraph GetParagraphAt(float y)
+        => Document.rootParagraph.GetParagraphAt(new(0, y));
+    public IEnumerable<SubRunInfo> GetInteractingRuns(TextRange range)
+        => Document.Editor.GetSelectionInfo(range).InteractingRuns;
+    public IEnumerable<SubRunInfo> GetInteractingRunsRecursive(TextRange range)
+        => Document.Editor.GetSelectionInfo(range).RecursiveInteractingRuns;
+    //public IEnumerable<SubRun> GetInterectingRuns(TextRange range)
+    //    => from x in this.GetInterectingRuns(range.Start, range.Length) where x.Length >= 0 select x;
+    public IEnumerable<Paragraph> GetInteractingParagraphs(TextRange range)
+        => from x in GetInteractingParagraphIndices(range) select this[x];
+    public IEnumerable<int> GetInteractingParagraphIndices(TextRange range)
+        => from x in GetInteractingRuns(range) select x.Index;
+    public IEnumerable<StyleRunEx> GetInteractingStlyeRuns(TextRange range)
     {
-        // Ensure layout is valid
-        Document.Layout.EnsureValid();
-
-        // Search paragraphs
-        int paraIndex = this.BinarySearch(y, (para, a) =>
-        {
-            if (para.GlobalInfo.ContentPosition.Y > a)
-                return 1;
-            if (para.GlobalInfo.ContentPosition.Y + para.ContentHeight < a)
-                return -1;
-            return 0;
-        });
-
-        // If in the vertical margin space between paragraphs, find the 
-        // paragraph whose content is closest
-        if (paraIndex < 0)
-        {
-            // Convert the paragraph index
-            paraIndex = ~paraIndex;
-
-            // Is it between paragraphs? 
-            // (ie: not above the first or below the last paragraph)
-            if (paraIndex > 0 && paraIndex < Count)
-            {
-                // Yes, find which paragraph's content the position is closer too
-                var paraPrev = this[paraIndex - 1];
-                var paraNext = this[paraIndex];
-                if (Math.Abs(y - (paraPrev.GlobalInfo.ContentPosition.Y + paraPrev.ContentHeight)) <
-                    Math.Abs(y - paraNext.GlobalInfo.ContentPosition.Y))
-                {
-                    return paraPrev;
-                }
-                else
-                {
-                    return paraNext;
-                }
-            }
-        }
-
-        // Clamp to last paragraph
-        if (paraIndex >= Count)
-            paraIndex = Count - 1;
-
-        // Return the paragraph
-        return this[paraIndex];
-    }
-    public IEnumerable<SubRun> GetInterectingRuns(TextRange range)
-        => from x in this.GetInterectingRuns(range.Start, range.Length) where x.Length >= 0 select x;
-    public IEnumerable<Paragraph> GetInterectingParagraphs(TextRange range)
-        => from x in GetInterectingParagraphIndices(range) select this[x];
-    public IEnumerable<int> GetInterectingParagraphIndices(TextRange range)
-        => from x in GetInterectingRuns(range) select x.Index;
-    public IEnumerable<StyleRunEx> GetInterectingStlyeRuns(TextRange range)
-    {
-        foreach (var subrun in GetInterectingRuns(range))
+        foreach (var subrun in GetInteractingRunsRecursive(range))
         {
             if (subrun.Length < 0) continue;
             // Get the paragraph
-            var para = this[subrun.Index];
+            var para = subrun.Paragraph;
 
             foreach (var styleRun in para.GetStyles(subrun.Offset, subrun.Length))
             {
@@ -216,9 +91,9 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
             }
         }
     }
-    public IEnumerable<SubRunRecursiveInfo> GetIntersectingRunsRecursiveReverse(int offset, int length, bool stopOnFullSelection)
+    public IEnumerable<SubRunInfo> GetIntersectingRunsRecursiveReverse(int offset, int length, bool stopOnFullSelection)
         => GetIntersectingRunsRecursiveReverse(this, offset, length, stopOnFullSelection);
-    static IEnumerable<SubRunRecursiveInfo> GetIntersectingRunsRecursiveReverse(IParagraphCollection parent, int offset, int length, bool stopOnFullSelection)
+    static IEnumerable<SubRunInfo> GetIntersectingRunsRecursiveReverse(IParagraphCollection parent, int offset, int length, bool stopOnFullSelection)
     {
         // Check list is consistent
         var paragraphs = new ReadOnlyListWrapper<Paragraph>(parent.Paragraphs);
@@ -259,9 +134,8 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
             }
             else
             {
-                yield return new SubRunRecursiveInfo(
-                    Parent: parent,
-                    Index: i,
+                yield return new SubRunInfo(
+                    ParentInfo: new(parent, i),
                     Offset: srOffset,
                     Length: srLength,
                     Partial: para.CodePointLength != srLength
@@ -270,7 +144,9 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
         }
     }
 }
-public readonly record struct SubRunRecursiveInfo(IParagraphCollection Parent, int Index, int Offset, int Length, bool Partial)
+public readonly record struct SubRunInfo(ParentInfo ParentInfo, int Offset, int Length, bool Partial)
 {
     public Paragraph Paragraph => Parent.Paragraphs[Index];
+    public IParagraphCollection Parent => ParentInfo.Parent;
+    public int Index => ParentInfo.Index;
 }

@@ -23,13 +23,14 @@ using System.Drawing;
 using Get.RichTextKit;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
+using Get.RichTextKit.Editor.Paragraphs.Panel;
 
 namespace Get.RichTextKit.Editor.Paragraphs;
 
 /// <summary>
 /// Abstract base class for all TextDocument paragraphs
 /// </summary>
-public abstract class Paragraph : IRun
+public abstract class Paragraph : IRun, IParentOrParagraph
 {
     public abstract IStyle StartStyle { get; }
     public abstract IStyle EndStyle { get; }
@@ -40,13 +41,13 @@ public abstract class Paragraph : IRun
     {
 
     }
-    /// <inheritdoc cref="Layout(ParentInfo)"/>
-    protected abstract void LayoutOverride(ParentInfo owner);
+    /// <inheritdoc cref="Layout(LayoutParentInfo)"/>
+    protected abstract void LayoutOverride(LayoutParentInfo owner);
     /// <summary>
     /// Layout the content of this paragraph
     /// </summary>
     /// <param name="owner">The TextDocument that owns this paragraph</param>
-    public void Layout(ParentInfo owner)
+    public void Layout(LayoutParentInfo owner)
         => LayoutOverride(owner with { AvaliableWidth = owner.AvaliableWidth - Margin.Left - Margin.Right });
 
     public record struct PaintOptions(RectangleF ViewBounds, TextPaintOptions TextPaintOptions, IDocumentViewOwner? viewOwner)
@@ -100,7 +101,26 @@ public abstract class Paragraph : IRun
     /// <returns>A HitTestResult</returns>
     public abstract HitTestResult HitTestLine(int lineIndex, float x);
 
-    public virtual SelectionInfo GetSelectionInfo(TextRange selection) => default;
+    public virtual SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection) => new(
+        selection, null, GetCaretInfo(selection.StartCaretPosition), GetCaretInfo(selection.EndCaretPosition),
+        this,
+        GetInteractingRuns(parentInfo, selection),
+        GetInteractingRunsRecursive(parentInfo, selection)
+    );
+    // So protected members can access the method
+    protected static IEnumerable<SubRunInfo> GetInteractingRuns(Paragraph para, ParentInfo parentInfo, TextRange selection)
+        => para.GetInteractingRuns(parentInfo, selection);
+    protected virtual IEnumerable<SubRunInfo> GetInteractingRuns(ParentInfo parentInfo, TextRange selection)
+    {
+        yield return new(
+            parentInfo, selection.Minimum, Math.Abs(selection.Length),
+            selection.Minimum <= 0 && selection.Maximum >= CodePointLength
+        );
+    }
+    protected static IEnumerable<SubRunInfo> GetInteractingRunsRecursive(Paragraph para, ParentInfo parentInfo, TextRange selection)
+        => para.GetInteractingRunsRecursive(parentInfo, selection);
+    protected virtual IEnumerable<SubRunInfo> GetInteractingRunsRecursive(ParentInfo parentInfo, TextRange selection)
+        => GetInteractingRuns(parentInfo, selection);
 
     /// <summary>
     /// Retrieves a list of all valid caret positions
@@ -273,7 +293,7 @@ public abstract class Paragraph : IRun
     int IRun.Offset => GlobalInfo.CodePointIndex;
     int IRun.Length => CodePointLength;
 
-    public abstract void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range);
+    public abstract void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range);
     public virtual bool CanJoinWith(Paragraph other) { return false; }
     public virtual bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex) { return false; }
     public abstract Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex);

@@ -12,18 +12,19 @@ using System.Collections;
 namespace Get.RichTextKit.Editor.Paragraphs.Panel;
 public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
 {
-    public Paragraph GlobalChildrenFromCodePointIndex(CaretPosition position, out IParagraphPanel parent, out int indexInParagraph)
+    public Paragraph GlobalChildrenFromCodePointIndex(CaretPosition position, out IParagraphPanel parent, out int paragraphIndex, out int codePointindexInParagraph)
     {
         Paragraph obj = this;
         // to stop C# compiler from screaming that out var may not be assigned
         parent = this;
-        indexInParagraph = position.CodePointIndex;
+        paragraphIndex = default;
+        codePointindexInParagraph = position.CodePointIndex;
         while (obj is IParagraphPanel panel)
         {
             parent = panel;
-            var a = LocalChildrenFromCodePointIndexAsIndex(new ReadOnlyListWrapper<Paragraph>(panel.Children), position, out indexInParagraph);
-            position.CodePointIndex = indexInParagraph;
-            obj = panel.Children[a];
+            paragraphIndex = LocalChildrenFromCodePointIndexAsIndex(new ReadOnlyListWrapper<Paragraph>(panel.Children), position, out codePointindexInParagraph);
+            position.CodePointIndex = codePointindexInParagraph;
+            obj = panel.Children[paragraphIndex];
         }
         return obj;
     }
@@ -95,6 +96,26 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     {
         var a = LocalChildrenFromLineIndexAsIndex(line, out lineIndexInParagraph);
         return Children[a];
+    }
+    public Paragraph GlobalChildrenFromCodePointIndex(CaretPosition position, out IParagraphPanel[] parents, out int codePointindexInParagraph)
+    {
+        var paragraphIndex = LocalChildrenFromCodePointIndexAsIndex(position, out codePointindexInParagraph);
+        position.CodePointIndex = codePointindexInParagraph;
+        Paragraph obj = Children[paragraphIndex];
+        int codePointindexInParagraph2 = default;
+        IEnumerable<IParagraphPanel> Iterate()
+        {
+            while (obj is IParagraphPanel panel)
+            {
+                yield return panel;
+                paragraphIndex = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(new ReadOnlyListWrapper<Paragraph>(panel.Children), position, out codePointindexInParagraph2);
+                position.CodePointIndex = codePointindexInParagraph2;
+                obj = panel.Children[paragraphIndex];
+            }
+        }
+        codePointindexInParagraph = codePointindexInParagraph2;
+        parents = Iterate().ToArray();
+        return obj;
     }
     /// <summary>
     /// Given a code point index relative to the document, return which

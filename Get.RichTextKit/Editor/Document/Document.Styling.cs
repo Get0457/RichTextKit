@@ -19,10 +19,10 @@ public partial class Document
     {
         bool? HasStyle = null;
         bool? NotHasStyle = null;
-        foreach (var subrun in Paragraphs.GetInterectingRuns(range.Normalized))
+        foreach (var subrun in Paragraphs.GetInteractingRunsRecursive(range.Normalized))
         {
             // Get the paragraph
-            var para = Paragraphs[subrun.Index];
+            var para = subrun.Paragraph;
 
             foreach (var styleRun in para.GetStyles(subrun.Offset, subrun.Length))
             {
@@ -47,7 +47,7 @@ public partial class Document
     }
     public bool GetStyleValue<T>(TextRange range, Func<IStyle, T> statusChecker, [NotNullWhen(true)] out T? value)
     {
-        var a = Paragraphs.GetInterectingStlyeRuns(range.Normalized);
+        var a = Paragraphs.GetInteractingStlyeRuns(range.Normalized);
         var enumerator = a.GetEnumerator();
         if (!enumerator.MoveNext())
         {
@@ -71,7 +71,7 @@ public partial class Document
     }
     public bool GetParagraphSetting<T>(TextRange range, Func<Paragraph, T?> statusChecker, [NotNullWhen(true)] out T? value)
     {
-        var a = Paragraphs.GetInterectingParagraphs(range);
+        var a = Paragraphs.GetInteractingParagraphs(range);
 
         var enumerator = a.GetEnumerator();
         if (!enumerator.MoveNext())

@@ -104,7 +104,7 @@ public partial class DocumentEditor
         CaretPosition navigateIndicies(int direction, Func<Paragraph, IReadOnlyList<int>> getIndicies)
         {
             // Get the paragraph and position in paragraph
-            var para = Paragraphs.GlobalFromCodePointIndex(position, out var parent, out int paraIndex, out var paraCodePointIndex);
+            var para = Paragraphs.GlobalChildrenFromCodePointIndex(position, out var parent, out int paraIndex, out var paraCodePointIndex);
             
             // Find the current caret index
             var indicies = getIndicies(para);
@@ -154,7 +154,7 @@ public partial class DocumentEditor
         CaretPosition navigateLine(int direction, ref float? xCoord)
         {
             // Get the paragraph and position in paragraph
-            int paraIndex = Paragraphs.FromCodePointIndexAsIndex(position, out var paraCodePointIndex);
+            int paraIndex = Paragraphs.LocalChildrenFromCodePointIndexAsIndex(position, out var paraCodePointIndex);
             var para = Paragraphs[paraIndex];
 
             // Get the line number the caret is on
@@ -201,7 +201,7 @@ public partial class DocumentEditor
         CaretPosition navigateLineEnd(int direction)
         {
             // Get the paragraph and position in paragraph
-            int paraIndex = Paragraphs.FromCodePointIndexAsIndex(position, out var paraCodePointIndex);
+            int paraIndex = Paragraphs.LocalChildrenFromCodePointIndexAsIndex(position, out var paraCodePointIndex);
             var para = Paragraphs[paraIndex];
 
             // Get the line number the caret is on

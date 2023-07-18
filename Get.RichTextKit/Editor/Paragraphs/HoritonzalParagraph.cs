@@ -24,14 +24,14 @@ public class HorizontalParagraph : PanelParagraph
     }
     public new List<Paragraph> Children => base.Children;
 
-    protected override Paragraph GetParagraphAt(PointF pt)
+    public override Paragraph GetParagraphAt(PointF pt)
         => FindClosestX(pt.X);
-    protected override void LayoutOverride(ParentInfo owner)
+    protected override void LayoutOverride(LayoutParentInfo owner)
     {
         var totalWidth =
                 owner.AvaliableWidth;
         _childWidth = totalWidth / Children.Count;
-        var parentInfo = new ParentInfo(_childWidth - Padding.Left - Padding.Right, owner.LineWrap, owner.LineNumberMode);
+        var parentInfo = new LayoutParentInfo(_childWidth - Padding.Left - Padding.Right, owner.LineWrap, owner.LineNumberMode);
         float XOffset = 0;
         int cpiOffset = 0;
         int lineOffset = 0;
@@ -51,7 +51,7 @@ public class HorizontalParagraph : PanelParagraph
     }
     public override int DisplayLineCount => 1;
 
-    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range)
+    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
     {
         //UndoManager.Do(new UndoDeleteText(_textBlock, range.Offset, range.Length));
     }

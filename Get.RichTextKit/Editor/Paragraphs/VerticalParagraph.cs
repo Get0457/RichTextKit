@@ -26,11 +26,11 @@ public partial class VerticalParagraph : PanelParagraph
         }
     }
 
-    protected override Paragraph GetParagraphAt(PointF pt)
+    public override Paragraph GetParagraphAt(PointF pt)
         => FindClosestY(pt.Y);
-    protected override void LayoutOverride(ParentInfo owner)
+    protected override void LayoutOverride(LayoutParentInfo owner)
     {
-        var parentInfo = new ParentInfo(owner.AvaliableWidth, owner.LineWrap, owner.LineNumberMode);
+        var parentInfo = new LayoutParentInfo(owner.AvaliableWidth, owner.LineWrap, owner.LineNumberMode);
         float YOffset = 0;
         int cpiOffset = 0;
         int displayLineOffset = 0;
@@ -52,7 +52,7 @@ public partial class VerticalParagraph : PanelParagraph
     }
     public override int DisplayLineCount => 1;
 
-    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range)
+    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
     {
         //UndoManager.Do(new UndoDeleteText(_textBlock, range.Offset, range.Length));
     }

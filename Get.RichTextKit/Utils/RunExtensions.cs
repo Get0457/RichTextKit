@@ -1,6 +1,7 @@
 ﻿// This file has been edited and modified from its original version.
 // The original version of this file can be found at https://github.com/toptensoftware/RichTextKit/.
 // Original copyright notice is below.
+using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Editor.Paragraphs.Panel;
 using System;
 using System.Collections.Generic;
@@ -123,7 +124,45 @@ namespace Get.RichTextKit.Utils
                 yield return sr;
             }
         }
+        public static IEnumerable<SubRun> LocalGetInterectingRuns(this IReadOnlyList<Paragraph> list, int offset, int length)
+        {
+            // Check list is consistent
+            //list.CheckValid(); won't work because paragraphs do have local/global index
 
+            // Calculate end position
+            int to = offset + length;
+
+            // Find the start run
+            int startRunIndex = list.BinarySearch(offset, (r, a) =>
+            {
+                if (r.LocalInfo.CodePointIndex > a)
+                    return 1;
+                if (r.LocalInfo.CodePointIndex + r.CodePointLength <= a)
+                    return -1;
+                return 0;
+            });
+            Debug.Assert(startRunIndex >= 0);
+            Debug.Assert(startRunIndex < list.Count);
+
+            // Iterate over all runs
+            for (int i = startRunIndex; i < list.Count; i++)
+            {
+                // Get the run
+                var r = list[i];
+
+                // Quit if past requested run
+                if (r.LocalInfo.CodePointIndex >= to)
+                    break;
+
+                // Yield sub-run
+                var sr = new SubRun();
+                sr.Index = i;
+                sr.Offset = i == startRunIndex ? offset - r.LocalInfo.CodePointIndex : 0;
+                sr.Length = Math.Min(r.LocalInfo.CodePointIndex + r.CodePointLength, to) - r.LocalInfo.CodePointIndex - sr.Offset;
+                sr.Partial = r.CodePointLength != sr.Length;
+                yield return sr;
+            }
+        }
         /// <summary>
         /// Given a list of consecutive runs, a start index and a length
         /// provides a list of sub-runs in the list of runs (in reverse order)

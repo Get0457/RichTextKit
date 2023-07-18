@@ -42,9 +42,9 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     float _TableDefaultRatioHeightSize = 100;
     void InvokeLayoutChanged() => Owner?.Layout.Invalidate();
     TableLayoutInfo _layoutInfo;
-    protected override void LayoutOverride(ParentInfo owner)
+    protected override void LayoutOverride(LayoutParentInfo owner)
     {
-        var parentInfo = new ParentInfo(default, owner.LineWrap, owner.LineNumberMode);
+        var parentInfo = new LayoutParentInfo(default, owner.LineWrap, owner.LineNumberMode);
         int cpiOffset = 0;
         int[] DisplayLineOffset = new int[_columnCount];
         int lineOffset = 0;
@@ -159,7 +159,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     }
     public override int DisplayLineCount => 1;
 
-    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range)
+    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
     {
         
     }
@@ -231,7 +231,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         if (rowIndex < 0) rowIndex = _rowCount - 1;
         return rowIndex;
     }
-    protected override Paragraph GetParagraphAt(PointF pt)
+    public override Paragraph GetParagraphAt(PointF pt)
     {
         int colIndex = GetColIndex(pt.X);
         int rowIndex = GetRowIndex(pt.Y);

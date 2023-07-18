@@ -19,10 +19,10 @@ public class UndoApplyStyle : UndoUnit<Document, DocumentViewUpdateInfo>
     public override void Do(Document context)
     {
         SavedStyles = new();
-        foreach (var subrun in context.Paragraphs.GetInterectingRuns(range.Start, range.Length))
+        foreach (var subrun in context.Paragraphs.GetInteractingRunsRecursive(range))
         {
             // Get the paragraph
-            var para = context.Paragraphs[subrun.Index];
+            var para = subrun.Paragraph;
 
             var _SavedStyles = new List<IStyle>();
             foreach (var styleRun in para.GetStyles(subrun.Offset, subrun.Length))
@@ -47,10 +47,10 @@ public class UndoApplyStyle : UndoUnit<Document, DocumentViewUpdateInfo>
             throw new InvalidOperationException();
         }
         var enumerator = SavedStyles.GetEnumerator();
-        foreach (var subrun in context.Paragraphs.GetInterectingRuns(range.Start, range.Length))
+        foreach (var subrun in context.Paragraphs.GetInteractingRunsRecursive(range))
         {
             // Get the paragraph
-            var para = context.Paragraphs[subrun.Index];
+            var para = subrun.Paragraph;
             enumerator.MoveNext();
             foreach (var (styleRun, oldStyle) in para.GetStyles(subrun.Offset, subrun.Length).Zip(enumerator.Current, static (a, b) => (a, b)))
             {

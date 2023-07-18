@@ -24,7 +24,7 @@ class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
 
     public bool ShouldAppend(Document context, StyledText text)
     {
-        if (context.Paragraphs.GlobalFromCodePointIndex(new(_codePointIndex), out _, out _, out _) is not ITextParagraph tp) return false;
+        if (context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _) is not ITextParagraph tp) return false;
         var _textBlock = tp.TextBlock;
         // If this is a word boundary then don't extend this unit
         return !WordBoundaryAlgorithm.IsWordBoundary(_textBlock.CodePoints.SubSlice(0, _offset + _length), text.CodePoints.AsSlice());
@@ -33,7 +33,7 @@ class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
     public void Append(Document context, StyledText text)
     {
         Paragraph para;
-        if ((para = context.Paragraphs.GlobalFromCodePointIndex(new(_codePointIndex), out _, out _, out _)) is not ITextParagraph tp) return;
+        if ((para = context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _)) is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
         // Insert into the text block
         _textBlock.InsertText(_offset + _length, text);
@@ -46,7 +46,7 @@ class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
     public void Replace(Document context, StyledText text)
     {
         Paragraph para;
-        if ((para = context.Paragraphs.GlobalFromCodePointIndex(new(_codePointIndex), out _, out _, out _)) is not ITextParagraph tp) return;
+        if ((para = context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _)) is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
 
         // Insert into the text block
@@ -61,7 +61,7 @@ class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
     int _notifyTextLength = 0;
     public override void Do(Document context)
     {
-        if (context.Paragraphs.GlobalFromCodePointIndex(new(_codePointIndex), out _, out _, out _) is not ITextParagraph tp) return;
+        if (context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _) is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
 
         // Insert the text into the text block
@@ -75,14 +75,14 @@ class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
     {
         base.Redo(context);
         context.Layout.EnsureValid();
-        var para = context.Paragraphs.GlobalFromCodePointIndex(new(_codePointIndex), out _, out _, out _);
+        var para = context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _);
         NotifyInfo(new(NewSelection: new(para.GlobalInfo.CodePointIndex + _offset + _notifyTextLength)));
     }
 
     public override void Undo(Document context)
     {
         Paragraph para;
-        if ((para = context.Paragraphs.GlobalFromCodePointIndex(new(_codePointIndex), out _, out _, out _)) is not ITextParagraph tp) return;
+        if ((para = context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _)) is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
         // Save a copy of the text being deleted
         _text = _textBlock.Extract(_offset, _length);

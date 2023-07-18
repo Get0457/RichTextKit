@@ -26,6 +26,7 @@ using Get.RichTextKit.Editor;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
 using Get.RichTextKit.Editor.Paragraphs.Panel;
+using Get.RichTextKit.Editor.Structs;
 
 namespace Get.RichTextKit.Editor;
 
@@ -220,7 +221,7 @@ public partial class DocumentEditor
         // Iterate over the sections to be deleted
         IParagraphCollection? joinParent = null;
         int joinParagraph = -1;
-        SubRunRecursiveInfo joinSubRun = default;
+        SubRunInfo joinSubRun = default;
         foreach (var subRun in Document.Paragraphs.GetIntersectingRunsRecursiveReverse(range.Start, range.Length, stopOnFullSelection: true))
         {
             Debug.Assert(joinParagraph == -1);
@@ -330,7 +331,7 @@ public partial class DocumentEditor
     int InsertInternal(int position, StyledText text)
     {
         // Find the position in the document
-        var para = Document.Paragraphs.GlobalFromCodePointIndex(new CaretPosition(position), out var parent, out var paraIndex, out var indexInParagraph);
+        var para = Document.Paragraphs.GlobalChildrenFromCodePointIndex(new CaretPosition(position), out var parent, out var paraIndex, out var indexInParagraph);
 
         // Is it a text paragraph?
         if (para is not ITextParagraph)
@@ -421,8 +422,8 @@ public partial class DocumentEditor
         float? unused = null;
         var nextPos = Navigate(range.EndCaretPosition, NavigationKind.CharacterRight, default, ref unused);
 
-        var paraThis = Document.Paragraphs.FromCodePointIndexAsIndex(range.EndCaretPosition, out var _);
-        var paraNext = Document.Paragraphs.FromCodePointIndexAsIndex(nextPos, out var _);
+        var paraThis = Document.Paragraphs.LocalChildrenFromCodePointIndexAsIndex(range.EndCaretPosition, out var _);
+        var paraNext = Document.Paragraphs.LocalChildrenFromCodePointIndexAsIndex(nextPos, out var _);
 
         if (paraThis == paraNext && nextPos.CodePointIndex < Document.Layout.Length)
             range.End = nextPos.CodePointIndex;
@@ -435,35 +436,14 @@ public partial class DocumentEditor
     /// <param name="x">The x-coordinate relative to top-left of the document</param>
     /// <param name="y">The y-coordinate relative to top-left of the document</param>
     /// <returns>A HitTestResult</returns>
-    public HitTestResult HitTest(PointF pt)
-    {
-        var para = Document.Paragraphs.FindClosest(y: pt.Y);
-        para.GlobalInfo.OffsetToThis(ref pt);
-        var htr = para.HitTest(pt);
-        para.GlobalInfo.OffsetFromThis(ref htr);
-        return htr;
-    }
+    public HitTestResult HitTest(PointF pt) => Document.rootParagraph.HitTest(pt);
     /// <summary>
     /// Calculates useful information for displaying a caret
     /// </summary>
     /// <param name="position">The caret position</param>
     /// <returns>A CaretInfo struct, or CaretInfo.None</returns>
     public CaretInfo GetCaretInfo(CaretPosition position)
-    {
-        // Make sure layout up to date
-        Document.Layout.EnsureValid();
-
-        // Find the paragraph
-        if (position.CodePointIndex < 0) position.CodePointIndex = 0;
-        var para = Document.Paragraphs.FromCodePointIndex(position, out var indexInParagraph);
-
-        // Get caret info
-        var ci = para.GetCaretInfo(new CaretPosition(indexInParagraph, position.AltPosition));
-
-        // Adjust caret info to be relative to document
-        para.GlobalInfo.OffsetFromThis(ref ci);
-
-        // Done
-        return ci;
-    }
+        => Document.rootParagraph.GetCaretInfo(position);
+    public SelectionInfo GetSelectionInfo(TextRange range)
+        => Document.rootParagraph.GetSelectionInfo(new(Document.rootParagraph, 0), range);
 }

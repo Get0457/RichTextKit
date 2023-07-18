@@ -42,50 +42,12 @@ public partial class Document
         Layout.EnsureValid();
 
         // Find the starting paragraph
-        int startParaIndex = Paragraphs.BinarySearch(bounds.Top, (para, a) =>
-        {
-            if (para.GlobalInfo.ContentPosition.Y > a)
-                return 1;
-            if (para.GlobalInfo.ContentPosition.Y + para.ContentHeight < a)
-                return -1;
-            return 0;
+        rootParagraph.DrawingContentPosition = new(0, 0 - bounds.Top);
+
+        rootParagraph.Paint(canvas, new() {
+            ViewBounds = bounds,
+            TextPaintOptions = options,
+            viewOwner = ownerView
         });
-        if (startParaIndex < 0)
-            startParaIndex = ~startParaIndex;
-
-        // Offset the selection range to be relative to the first paragraph
-        // that will be painted
-        if (options.Selection != null)
-        {
-            if (startParaIndex == Paragraphs.Count)
-            {
-                options.Selection = options.Selection.Value.Offset(-Layout.Length);
-            }
-            else
-            {
-                options.Selection = options.Selection.Value.Offset(-Paragraphs[startParaIndex].GlobalInfo.CodePointIndex);
-            }
-        }
-
-        // Paint...  
-        for (int i = startParaIndex; i < Paragraphs.Count; i++)
-        {
-            // Get the paragraph
-            var p = Paragraphs[i];
-
-            // Quit if past the region to be painted?
-            if (p.GlobalInfo.ContentPosition.Y > bounds.Bottom)
-                break;
-
-            p.DrawingContentPosition = p.GlobalInfo.ContentPosition with { Y = p.GlobalInfo.ContentPosition.Y - bounds.Top };
-            // Paint it
-            p.Paint(canvas, new(bounds, options, ownerView));
-
-            // Update the selection range for the next paragraph
-            if (options.Selection != null)
-            {
-                options.Selection = options.Selection.Value.Offset(-p.CodePointLength);
-            }
-        }
     }
 }

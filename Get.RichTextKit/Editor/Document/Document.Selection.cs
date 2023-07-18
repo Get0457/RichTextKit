@@ -59,7 +59,7 @@ public partial class Document
         TextRange getWordRange()
         {
             // Get the paragraph and position in paragraph
-            var para = Paragraphs.GlobalFromCodePointIndex(position, out _, out _, out var paraCodePointIndex);
+            var para = Paragraphs.GlobalChildrenFromCodePointIndex(position, out _, out _, out var paraCodePointIndex);
             
             // Find the word boundaries for this paragraph and find 
             // the current word
@@ -92,7 +92,7 @@ public partial class Document
         TextRange getLineRange()
         {
             // Get the paragraph and position in paragraph
-            var para = Paragraphs.FromCodePointIndex(position, out var paraCodePointIndex);
+            var para = Paragraphs.LocalChildrenFromCodePointIndex(position, out var paraCodePointIndex);
 
             // Get the line number the caret is on
             var ci = para.GetCaretInfo(new CaretPosition(paraCodePointIndex, position.AltPosition));
@@ -113,7 +113,7 @@ public partial class Document
         TextRange getParagraphRange()
         {
             // Get the paragraph and position in paragraph
-            var para = Paragraphs.FromCodePointIndex(position, out var paraCodePointIndex);
+            var para = Paragraphs.LocalChildrenFromCodePointIndex(position, out var paraCodePointIndex);
 
             // Create text range covering the entire paragraph
             return new TextRange(

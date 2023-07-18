@@ -83,7 +83,7 @@ public partial class DocumentLayout : INotifyPropertyChanged
             var para = Document.Paragraphs[i];
 
             // Layout
-            para.Layout(new ParentInfo(
+            para.Layout(new LayoutParentInfo(
                 PageWidth - 
                 Margin.Left -
                 Margin.Right,

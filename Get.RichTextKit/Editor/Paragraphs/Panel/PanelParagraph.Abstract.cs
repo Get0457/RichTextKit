@@ -12,5 +12,5 @@ namespace Get.RichTextKit.Editor.Paragraphs.Panel;
 
 public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
 {
-    protected abstract Paragraph GetParagraphAt(PointF pt);
+    public abstract Paragraph GetParagraphAt(PointF pt);
 }
