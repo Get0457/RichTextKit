@@ -65,7 +65,8 @@ public partial class VerticalParagraph : PanelParagraph
         return null!;
     }
 
-    protected override float ContentWidthOverride => Children.Max(x => x.ContentWidth);
+    protected override float ContentWidthOverride => Children.Count is 0 ? 0: Children.Max(x => x.ContentWidth);
 
-    protected override float ContentHeightOverride => Children.Sum(x => x.ContentHeight) + _Spacing * Math.Max(0, Children.Count - 1);
+    protected override float ContentHeightOverride => Children.Count is 0 ? 0 : Children.Sum(x => x.ContentHeight) + _Spacing * Math.Max(0, Children.Count - 1);
+    public override bool IsChildrenReadOnly => false;
 }

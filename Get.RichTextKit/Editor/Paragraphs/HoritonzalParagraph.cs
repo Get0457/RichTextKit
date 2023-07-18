@@ -83,6 +83,8 @@ public class HorizontalParagraph : PanelParagraph
 
     protected override float ContentHeightOverride => Children.Max(x => x.ContentHeight) + Padding.Bottom + Padding.Top;
 
+    public override bool IsChildrenReadOnly => true;
+
     public override void Paint(SKCanvas canvas, PaintOptions options)
     {
         base.Paint(canvas, options);

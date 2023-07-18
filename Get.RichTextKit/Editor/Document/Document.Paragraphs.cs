@@ -36,6 +36,9 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
     readonly Document Document;
 
     IList<Paragraph> IParagraphCollection.Paragraphs => this;
+
+    bool IParagraphCollection.IsChildrenReadOnly => false;
+
     internal DocumentParagraphs(Document owner)
     {
         Document = owner;
@@ -119,6 +122,26 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
         }
         return obj;
     }
+    public Paragraph GlobalFromCodePointIndex(CaretPosition position, out IParagraphPanel[] parents, out int codePointindexInParagraph)
+    {
+        var paragraphIndex = FromCodePointIndexAsIndex(position, out codePointindexInParagraph);
+        position.CodePointIndex = codePointindexInParagraph;
+        Paragraph obj = this[paragraphIndex];
+        int codePointindexInParagraph2 = default;
+        IEnumerable<IParagraphPanel> Iterate()
+        {
+            while (obj is IParagraphPanel panel)
+            {
+                yield return panel;
+                paragraphIndex = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(new ReadOnlyListWrapper<Paragraph>(panel.Children), position, out codePointindexInParagraph2);
+                position.CodePointIndex = codePointindexInParagraph2;
+                obj = panel.Children[paragraphIndex];
+            }
+        }
+        codePointindexInParagraph = codePointindexInParagraph2;
+        parents = Iterate().ToArray();
+        return obj;
+    }
 
     /// <summary>
     /// Helper to find the closest paragraph to a y-coordinate 
@@ -193,9 +216,9 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
             }
         }
     }
-    public IEnumerable<SubRunRecursiveInfo> GetIntersectingRunsRecursiveReverse(int offset, int length)
-        => GetIntersectingRunsRecursiveReverse(this, offset, length);
-    static IEnumerable<SubRunRecursiveInfo> GetIntersectingRunsRecursiveReverse(IParagraphCollection parent, int offset, int length)
+    public IEnumerable<SubRunRecursiveInfo> GetIntersectingRunsRecursiveReverse(int offset, int length, bool stopOnFullSelection)
+        => GetIntersectingRunsRecursiveReverse(this, offset, length, stopOnFullSelection);
+    static IEnumerable<SubRunRecursiveInfo> GetIntersectingRunsRecursiveReverse(IParagraphCollection parent, int offset, int length, bool stopOnFullSelection)
     {
         // Check list is consistent
         var paragraphs = new ReadOnlyListWrapper<Paragraph>(parent.Paragraphs);
@@ -227,9 +250,9 @@ public class DocumentParagraphs : ObservableCollection<Paragraph>, IParagraphCol
             var srLength = Math.Min(para.LocalInfo.CodePointIndex + para.CodePointLength, to) - para.LocalInfo.CodePointIndex - srOffset;
             
 
-            if (para is IParagraphPanel panel)
+            if (para is IParagraphPanel panel && !(stopOnFullSelection && srOffset is 0 && srLength >= para.CodePointLength))
             {
-                foreach (var subrun in GetIntersectingRunsRecursiveReverse(panel, srOffset, srLength))
+                foreach (var subrun in GetIntersectingRunsRecursiveReverse(panel, srOffset, srLength, stopOnFullSelection))
                 {
                     yield return subrun;
                 }

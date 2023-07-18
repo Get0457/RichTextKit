@@ -6,6 +6,7 @@ using System.ComponentModel;
 using Get.EasyCSharp;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Styles;
+using Get.RichTextKit.Editor.Paragraphs.Panel;
 
 namespace Get.RichTextKit.Editor.DocumentView;
 
@@ -31,11 +32,17 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     internal IStyle? CurrentPositionStyle { get; private set; }
     public IStyle CurrentCaretStyle => CurrentPositionStyle ?? DocumentView.OwnerDocument.GetStyleAtPosition(Range.EndCaretPosition);
     bool wasNotSelection = false;
+    public IParagraphPanel[]? CurrentCaretPositionParent { get; private set; }
+    public Paragraph? CurrentCaretPositionParagraph { get; private set; }
     void OnRangeChanged()
     {
         if (!Range.IsRange)
         {
             CurrentPositionStyle = DocumentView.OwnerDocument.GetStyleAtPosition(Range.EndCaretPosition);
+            CurrentCaretPositionParagraph = DocumentView.OwnerDocument.Paragraphs.GlobalFromCodePointIndex(
+                Range.EndCaretPosition, out var a, out _
+            );
+            CurrentCaretPositionParent = a;
             if (Range.AltPosition is true)
             {
                 var thestr = DocumentView.OwnerDocument.GetText(new(Range.Start - 1, Range.Start)).ToString();
@@ -50,7 +57,10 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
             }
         }
         else
+        {
             CurrentPositionStyle = null;
+            CurrentCaretPositionParent = null;
+        }
         //var start = DocumentView.Controller.HitTest(new(0, 0));
         //var end = DocumentView.Controller.HitTest(new(0, DocumentView.ViewHeight));
         UpdateCaretInfo();

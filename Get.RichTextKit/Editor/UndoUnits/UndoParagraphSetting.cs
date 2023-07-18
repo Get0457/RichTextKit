@@ -50,12 +50,20 @@ public class UndoParagraphSetting<T> : UndoUnit<Document, DocumentViewUpdateInfo
         var idx1 = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(parent.Paragraphs.AsReadOnly(), range.StartCaretPosition, out int cpi1);
         var idx2 = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(parent.Paragraphs.AsReadOnly(), range.EndCaretPosition, out int cpi2);
         bool success = false;
-        success = SetStyles(parent.Paragraphs[idx1], new(cpi1, parent.Paragraphs[idx1].CodePointLength)) || success;
-        for (int i = idx1 + 1; i < idx2; i++)
+        if (idx1 == idx2)
         {
-            success = SetStyles(parent.Paragraphs[i], new(0, parent.Paragraphs[i].CodePointLength)) || success;
+            success = SetStyles(parent.Paragraphs[idx1], new(cpi1, cpi2)) || success;
         }
-        success = SetStyles(parent.Paragraphs[idx2], new(0, cpi2)) || success;
+        else
+        {
+
+            success = SetStyles(parent.Paragraphs[idx1], new(cpi1, parent.Paragraphs[idx1].CodePointLength)) || success;
+            for (int i = idx1 + 1; i < idx2; i++)
+            {
+                success = SetStyles(parent.Paragraphs[i], new(0, parent.Paragraphs[i].CodePointLength)) || success;
+            }
+            success = SetStyles(parent.Paragraphs[idx2], new(0, cpi2)) || success;
+        }
         if (success) return true;
 
         if (parent is Paragraph para2)

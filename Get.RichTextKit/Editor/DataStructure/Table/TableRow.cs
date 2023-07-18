@@ -1,6 +1,8 @@
 ﻿using System.Collections;
-namespace Get.RichTextKit.Editor.DataStructure.Table;
+using System.Diagnostics;
 
+namespace Get.RichTextKit.Editor.DataStructure.Table;
+[DebuggerDisplay("Count = {Count}")]
 public readonly struct TableRow<T> : IReadOnlyList<T>, ITableOwner<T>
 {
     internal TableRow(ITable<T> instance, int rowIndex)

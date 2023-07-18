@@ -41,7 +41,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     [Property(OnChanged = nameof(InvokeLayoutChanged))]
     float _TableDefaultRatioHeightSize = 100;
     void InvokeLayoutChanged() => Owner?.Layout.Invalidate();
-    TableLayoutInfo _currentTableLayoutInfo;
+    TableLayoutInfo _layoutInfo;
     protected override void LayoutOverride(ParentInfo owner)
     {
         var parentInfo = new ParentInfo(default, owner.LineWrap, owner.LineNumberMode);
@@ -81,7 +81,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
             }
         }
         var (RowsPos, RowsHeight) = CalculateRowInfo(rowsRequestedHeight);
-        _currentTableLayoutInfo = new(RowsPos, RowsHeight, ColumnsPos, ColumnsWidth);
+        _layoutInfo = new(RowsPos, RowsHeight, ColumnsPos, ColumnsWidth);
 
         foreach (var (rowIdx, row) in Rows.WithRowIndex())
         {
@@ -173,10 +173,10 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     }
 
     protected override float ContentWidthOverride
-        => _currentTableLayoutInfo.ColumnsPos[^1] + _currentTableLayoutInfo.ColumnsWidth[^1];
+        => _layoutInfo.ColumnsPos[^1] + _layoutInfo.ColumnsWidth[^1];
 
     protected override float ContentHeightOverride
-        => _currentTableLayoutInfo.RowsPos[^1] + _currentTableLayoutInfo.RowsHeight[^1];
+        => _layoutInfo.RowsPos[^1] + _layoutInfo.RowsHeight[^1];
     public override LineInfo GetLineInfo(int line)
     {
         var idx = LocalChildrenFromLineIndexAsIndex(line, out var newLineIdx);
@@ -209,9 +209,9 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     {
         var colIndex = BinarySearch(0, _columnCount, (idx) =>
         {
-            if (_currentTableLayoutInfo.ColumnsPos[idx] >= x)
+            if (_layoutInfo.ColumnsPos[idx] >= x)
                 return 1;
-            if (_currentTableLayoutInfo.ColumnsPos[idx] + _currentTableLayoutInfo.ColumnsWidth[idx] < x)
+            if (_layoutInfo.ColumnsPos[idx] + _layoutInfo.ColumnsWidth[idx] < x)
                 return -1;
             return 0;
         });
@@ -222,9 +222,9 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     {
         var rowIndex = BinarySearch(0, _rowCount, (idx) =>
         {
-            if (_currentTableLayoutInfo.RowsPos[idx] >= y)
+            if (_layoutInfo.RowsPos[idx] >= y)
                 return 1;
-            if (_currentTableLayoutInfo.RowsPos[idx] + _currentTableLayoutInfo.RowsHeight[idx] < y)
+            if (_layoutInfo.RowsPos[idx] + _layoutInfo.RowsHeight[idx] < y)
                 return -1;
             return 0;
         });
@@ -260,19 +260,46 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     }
     public override void Paint(SKCanvas canvas, PaintOptions options)
     {
-        base.Paint(canvas, options);
         var width = ContentWidth;
         var height = ContentHeight;
+        if (options.TextPaintOptions.Selection.HasValue)
+        {
+            var selection = options.TextPaintOptions.Selection.Value;
+            var altPos = selection.AltPosition;
+            selection = new(Math.Max(selection.Minimum, 0), Math.Min(selection.Maximum + (altPos ? 0 : 1), Math.Max(0, CodePointLength)), true);
+            var idx1 = LocalChildrenFromCodePointIndexAsIndex(selection.StartCaretPosition, out _);
+            var idx2 = LocalChildrenFromCodePointIndexAsIndex(selection.EndCaretPosition, out _);
+
+            if (idx1 != idx2)
+            {
+                var (r1, c1) = ResolveIndex(idx1);
+                var (r2, c2) = ResolveIndex(idx2);
+                options.TextPaintOptions = options.TextPaintOptions.Clone();
+                options.TextPaintOptions.Selection = null;
+                canvas.Save();
+                canvas.Translate(DrawingContentPosition.X, DrawingContentPosition.Y);
+                using SKPaint selectionPaint = new() { Color = options.TextPaintOptions.SelectionColor };
+                canvas.DrawRect(
+                    x: _layoutInfo.ColumnsPos[c1],
+                    y: _layoutInfo.RowsPos[r1],
+                    w: _layoutInfo.ColumnsPos[c2] - _layoutInfo.ColumnsPos[c1] + _layoutInfo.ColumnsWidth[c2],
+                    h: _layoutInfo.RowsPos[r2] - _layoutInfo.RowsPos[r1] + _layoutInfo.RowsHeight[r2],
+                    selectionPaint
+                );
+                canvas.Restore();
+            }
+        }
+        base.Paint(canvas, options);
         using SKPaint paint = new() { Color = options.TextPaintOptions.TextDefaultColor };
         canvas.Save();
         canvas.Translate(DrawingContentPosition.X, DrawingContentPosition.Y);
-        foreach (var rowPos in _currentTableLayoutInfo.RowsPos)
+        foreach (var rowPos in _layoutInfo.RowsPos)
         {
             canvas.DrawLine(x0: 0, x1: width, y0: rowPos, y1: rowPos, paint: paint);
         }
         var rowEnd = height;
         canvas.DrawLine(x0: 0, x1: width, y0: rowEnd, y1: rowEnd, paint: paint);
-        foreach (var colPos in _currentTableLayoutInfo.ColumnsPos)
+        foreach (var colPos in _layoutInfo.ColumnsPos)
         {
             canvas.DrawLine(y0: 0, y1: height, x0: colPos, x1: colPos, paint: paint);
         }
@@ -280,4 +307,5 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         canvas.DrawLine(y0: 0, y1: height, x0: colEnd, x1: colEnd, paint: paint);
         canvas.Restore();
     }
+    public override bool IsChildrenReadOnly => true;
 }

@@ -26,6 +26,8 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
     public override void Redo(Document context)
     {
         base.Redo(context);
+        context.Layout.Invalidate();
+        context.Layout.EnsureValid();
         var para = context.Paragraphs.GlobalFromCodePointIndex(new(_codePointIndex), out _, out _, out _);
         NotifyInfo(new(NewSelection: new(para.GlobalInfo.CodePointIndex + _offset)));
     }

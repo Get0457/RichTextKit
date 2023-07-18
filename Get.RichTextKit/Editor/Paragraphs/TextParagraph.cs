@@ -172,7 +172,13 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
 
     public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range)
     {
+        if (range.Offset + range.Length >= /* last index */ _textBlock.Length)
+            range = range with { Length = _textBlock.Length - range.Offset };
         UndoManager.Do(new UndoDeleteText(GlobalInfo.CodePointIndex, range.Offset, range.Length));
+    }
+    public override bool CanJoinWith(Paragraph next)
+    {
+        return next is ITextParagraph;
     }
     public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
     {

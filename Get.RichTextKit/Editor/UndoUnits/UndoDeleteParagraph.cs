@@ -4,6 +4,7 @@ using Get.RichTextKit.Editor.DocumentView;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Editor.Paragraphs.Panel;
 using Get.RichTextKit.Utils;
+using System.Diagnostics;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
 
@@ -25,6 +26,7 @@ class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     public override void Redo(Document context)
     {
         base.Redo(context);
+        context.Layout.InvalidateAndValid();
         NotifyInfo(new(NewSelection: new(_paragraph.GlobalInfo.CodePointIndex, true)));
     }
 
@@ -32,6 +34,7 @@ class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     {
         _parent.Paragraphs.Insert(_index, _paragraph);
         _paragraph.OnParagraphAdded(context);
+        context.Layout.InvalidateAndValid();
         NotifyInfo(new(NewSelection: new(_paragraph.GlobalInfo.CodePointIndex + _paragraph.CodePointLength)));
     }
 

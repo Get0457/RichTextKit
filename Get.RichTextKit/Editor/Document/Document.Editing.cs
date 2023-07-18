@@ -33,6 +33,13 @@ public partial class Document
 {
     public DocumentEditor Editor { get; }
 }
+public struct ReplaceTextStatus
+{
+    public static ReplaceTextStatus Success { get; } = new() { IsSuccess = true };
+    public bool IsSuccess { get; init; }
+    public IParagraphCollection? FailToDeleteParent { get; init; }
+    public Paragraph? FailToDeleteParagraph { get; init; }
+}
 public partial class DocumentEditor
 {
     Document Document;
@@ -48,7 +55,7 @@ public partial class DocumentEditor
     /// <param name="text">The text to replace with</param>
     /// <param name="semantics">Controls how undo operations are coalesced and view selections updated</param>"
     /// <param name="styleToUse">The style to use for the added text (optional)</param>
-    public void ReplaceText(TextRange range, ReadOnlySpan<char> text, EditSemantics semantics, IStyle? styleToUse = null)
+    public ReplaceTextStatus ReplaceText(TextRange range, ReadOnlySpan<char> text, EditSemantics semantics, IStyle? styleToUse = null)
     {
         // Convert text to utf32
         Slice<int> codePoints;
@@ -62,7 +69,7 @@ public partial class DocumentEditor
         }
 
         // Do the work
-        ReplaceText(range, codePoints, semantics, styleToUse);
+        return ReplaceText(range, codePoints, semantics, styleToUse);
     }
 
     /// <summary>
@@ -73,7 +80,7 @@ public partial class DocumentEditor
     /// <param name="text">The text to replace with</param>
     /// <param name="semantics">Controls how undo operations are coalesced and view selections updated</param>"
     /// <param name="styleToUse">The style to use for the added text (optional)</param>
-    public void ReplaceText(TextRange range, ReadOnlySpan<int> text, EditSemantics semantics, IStyle? styleToUse = null)
+    public ReplaceTextStatus ReplaceText(TextRange range, ReadOnlySpan<int> text, EditSemantics semantics, IStyle? styleToUse = null)
     {
         // Convert text to utf32
         Slice<int> codePoints;
@@ -87,7 +94,7 @@ public partial class DocumentEditor
         }
 
         // Do the work
-        ReplaceText(range, codePoints, semantics, styleToUse);
+        return ReplaceText(range, codePoints, semantics, styleToUse);
     }
 
     /// <summary>
@@ -98,7 +105,7 @@ public partial class DocumentEditor
     /// <param name="codePoints">The text to replace with</param>
     /// <param name="semantics">Controls how undo operations are coalesced and view selections updated</param>"
     /// <param name="styleToUse">The style to use for the added text (optional)</param>
-    public void ReplaceText(TextRange range, Slice<int> codePoints, EditSemantics semantics, IStyle? styleToUse = null)
+    public ReplaceTextStatus ReplaceText(TextRange range, Slice<int> codePoints, EditSemantics semantics, IStyle? styleToUse = null)
     {
         Document.Layout.EnsureValid();
         // Check range is valid
@@ -119,7 +126,7 @@ public partial class DocumentEditor
 
         var styledText = new StyledText(codePoints);
         styledText.ApplyStyle(0, styledText.Length, styleToUse);
-        ReplaceTextInternal(range, styledText, semantics, -1);
+        return ReplaceTextInternal(range, styledText, semantics, -1);
     }
 
     /// <summary>
@@ -130,7 +137,7 @@ public partial class DocumentEditor
     /// <param name="codePoints">The text to replace with</param>
     /// <param name="semantics">Controls how undo operations are coalesced and view selections updated</param>"
     /// <param name="styleToUse">The style to use for the added text (optional)</param>
-    public void ReplaceText(TextRange range, StyledText styledText, EditSemantics semantics)
+    public ReplaceTextStatus ReplaceText(TextRange range, StyledText styledText, EditSemantics semantics)
     {
         // Check range is valid
         if (range.Minimum < 0 || range.Maximum > Document.Layout.Length)
@@ -139,7 +146,7 @@ public partial class DocumentEditor
         if (IsImeComposing)
             FinishImeComposition();
 
-        ReplaceTextInternal(range, styledText, semantics, -1);
+        return ReplaceTextInternal(range, styledText, semantics, -1);
     }
     /// <summary>
     /// Internal helper to replace text creating an undo unit
@@ -148,11 +155,11 @@ public partial class DocumentEditor
     /// <param name="text">The replacement text</param>
     /// <param name="semantics">The edit semantics of the change</param>
     /// <param name="imeCaretOffset">The position of the IME caret relative to the start of the range</param>
-    void ReplaceTextInternal(TextRange range, StyledText text, EditSemantics semantics, int imeCaretOffset)
+    ReplaceTextStatus ReplaceTextInternal(TextRange range, StyledText text, EditSemantics semantics, int imeCaretOffset)
     {
         // Quit if redundant
         if (!range.IsRange && text.Length == 0)
-            return;
+            return ReplaceTextStatus.Success;
 
         // Make sure layout is up to date
         Document.Layout.EnsureValid();
@@ -168,8 +175,8 @@ public partial class DocumentEditor
         // Try to extend the last undo operation
         if (Document.UndoManager.GetUnsealedUnit() is UndoReplaceTextGroup group &&
             group.TryExtend(Document, range, text, semantics, imeCaretOffset))
-            return;
-
+            return ReplaceTextStatus.Success;
+        ReplaceTextStatus status;
         // Wrap all edits in an undo group.  Note this is a custom
         // undo group that also fires the DocumentChanged notification
         // to views.
@@ -179,9 +186,10 @@ public partial class DocumentEditor
             // Delete range (if any)
             if (range.Length != 0)
             {
-                DeleteInternal(range);
+                status = DeleteInternal(range);
             }
-
+            else status = ReplaceTextStatus.Success;
+            if (!status.IsSuccess) return status;
             // Insert text (if any)
             if (text.Length != 0)
             {
@@ -199,21 +207,24 @@ public partial class DocumentEditor
             });
         }
         Document.InvokeTextChanged(range);
+        return status;
     }
 
     /// <summary>
     /// Delete a section of the document
     /// </summary>
     /// <param name="range">The range to be deleted</param>
-    void DeleteInternal(TextRange range)
+    ReplaceTextStatus DeleteInternal(TextRange range)
     {
+        ReplaceTextStatus status = ReplaceTextStatus.Success;
         // Iterate over the sections to be deleted
         IParagraphCollection? joinParent = null;
         int joinParagraph = -1;
-        foreach (var subRun in Document.Paragraphs.GetIntersectingRunsRecursiveReverse(range.Start, range.Length))
+        SubRunRecursiveInfo joinSubRun = default;
+        foreach (var subRun in Document.Paragraphs.GetIntersectingRunsRecursiveReverse(range.Start, range.Length, stopOnFullSelection: true))
         {
             Debug.Assert(joinParagraph == -1);
-            
+
             // Is it a partial paragraph deletion?
             if (subRun.Partial)
             {
@@ -234,16 +245,18 @@ public partial class DocumentEditor
                         continue;
                     }
                     Debug.Assert(joinParagraph == -1);
+
                     joinParagraph = subRun.Index;
                     joinParent = subRun.Parent;
+                    joinSubRun = subRun;
                 }
-
-                // Delete the text
-                para.DeletePartial(Document.UndoManager, subRun);
+                else
+                    // Delete the text if not going to join with another paragraph
+                    para.DeletePartial(Document.UndoManager, subRun);
             }
-            else
+            else if (!subRun.Parent.IsChildrenReadOnly)
             {
-                if (Document.Paragraphs.Count > 1)
+                if (subRun.Parent.Paragraphs.Count > 1)
                 {
                     // Remove entire paragraph
                     Document.UndoManager.Do(new UndoDeleteParagraph(subRun.Parent, subRun.Index));
@@ -257,6 +270,11 @@ public partial class DocumentEditor
                     Document.UndoManager.Do(new UndoInsertParagraph(subRun.Parent, 0, para));
                 }
             }
+            else
+            {
+                status = new() { IsSuccess = false, FailToDeleteParent = subRun.Parent, FailToDeleteParagraph = subRun.Paragraph };
+                return status;
+            }
         }
 
         // If the deletion started mid paragraph and crossed into
@@ -266,12 +284,16 @@ public partial class DocumentEditor
             // Get both paragraphs
             var firstPara = joinParent.Paragraphs[joinParagraph];
             var secondPara = joinParent.Paragraphs[joinParagraph + 1];
-
-            firstPara.TryJoin(Document.UndoManager, joinParagraph);
+            if (firstPara.CanJoinWith(secondPara))
+            {
+                firstPara.DeletePartial(Document.UndoManager, joinSubRun);
+                firstPara.TryJoin(Document.UndoManager, joinParagraph);
+            }
         }
 
         // Layout is now invalid
         Document.Layout.EnsureValid();
+        return status;
     }
 
     //void NewDeleteInternal(TextRange range)
@@ -309,7 +331,7 @@ public partial class DocumentEditor
     {
         // Find the position in the document
         var para = Document.Paragraphs.GlobalFromCodePointIndex(new CaretPosition(position), out var parent, out var paraIndex, out var indexInParagraph);
-        
+
         // Is it a text paragraph?
         if (para is not ITextParagraph)
         {

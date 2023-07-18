@@ -2,6 +2,7 @@
 
 public interface IParagraphCollection
 {
+    bool IsChildrenReadOnly { get; }
     IList<Paragraph> Paragraphs { get; }
 }
 public interface IParagraphPanel : IParagraphCollection

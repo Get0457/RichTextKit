@@ -17,6 +17,7 @@
 // under the License.
 
 using SkiaSharp;
+using System.Diagnostics;
 
 namespace Get.RichTextKit
 {
@@ -54,5 +55,9 @@ namespace Get.RichTextKit
         /// point index is exactly on a line break.
         /// </summary>
         public bool AltPosition;
+        public override string ToString()
+        {
+            return $"{CodePointIndex}{(AltPosition ? "*" : "")}";
+        }
     }
 }

@@ -1,7 +1,8 @@
 ﻿using System.Collections;
+using System.Diagnostics;
 
 namespace Get.RichTextKit.Editor.DataStructure.Table;
-
+[DebuggerDisplay("Count = {Count}")]
 public class TableColumnManager<T> : IReadOnlyList<TableColumn<T>>, ITableOwner<T>
 {
     public ITable<T> Owner { get; }

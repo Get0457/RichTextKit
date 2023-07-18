@@ -41,6 +41,11 @@ public partial class DocumentLayout : INotifyPropertyChanged
     int _Spacing = 30;
 
     internal DocumentLayout(Document owner) => Document = owner;
+    public void InvalidateAndValid()
+    {
+        Invalidate();
+        EnsureValid();
+    }
     /// <summary>
     /// Mark the document as needing layout update
     /// </summary>

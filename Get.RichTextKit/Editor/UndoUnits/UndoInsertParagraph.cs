@@ -35,6 +35,8 @@ class UndoInsertParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     {
         _parent.Paragraphs.RemoveAt(_index);
         _paragraph.OnParagraphRemoved(context);
+        context.Layout.Invalidate();
+        context.Layout.EnsureValid();
         NotifyInfo(new(NewSelection: new(_paragraph.GlobalInfo.CodePointIndex, true)));
     }
 

@@ -100,6 +100,8 @@ public abstract class Paragraph : IRun
     /// <returns>A HitTestResult</returns>
     public abstract HitTestResult HitTestLine(int lineIndex, float x);
 
+    public virtual SelectionInfo GetSelectionInfo(TextRange selection) => default;
+
     /// <summary>
     /// Retrieves a list of all valid caret positions
     /// </summary>
@@ -272,7 +274,8 @@ public abstract class Paragraph : IRun
     int IRun.Length => CodePointLength;
 
     public abstract void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunRecursiveInfo range);
-    public abstract bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex);
+    public virtual bool CanJoinWith(Paragraph other) { return false; }
+    public virtual bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex) { return false; }
     public abstract Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex);
     public abstract void GetTextByAppendTextToBuffer(Utf32Buffer buffer, int position, int length);
     public Utf32Buffer GetText(int position, int length)

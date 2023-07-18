@@ -121,6 +121,8 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     IList<Paragraph> IParagraphPanel.Children => Children;
     IList<Paragraph> IParagraphCollection.Paragraphs => Children;
 
+    public abstract bool IsChildrenReadOnly { get; }
+
     public override void GetTextByAppendTextToBuffer(Utf32Buffer bufToAdd, int position, int length)
     {
         Range r = position..(position + length);

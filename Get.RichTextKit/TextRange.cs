@@ -282,5 +282,27 @@ namespace Get.RichTextKit
         {
             return $"{Start} → {End} (len: {Length})";
         }
+        public override bool Equals(object obj)
+        {
+            if (obj is TextRange r)
+                return Equals(r);
+            if (obj is CaretPosition p)
+                return Equals(p);
+            return false;
+        }
+        public bool Equals(TextRange other)
+        {
+            return Start == other.Start && End == other.End && AltPosition == other.AltPosition;
+        }
+        public bool Equals(CaretPosition other)
+        {
+            return !IsRange && Start == other.CodePointIndex && AltPosition == other.AltPosition;
+        }
+        public static bool operator ==(TextRange a, TextRange b) => a.Equals(b);
+        public static bool operator !=(TextRange a, TextRange b) => !a.Equals(b);
+        public override int GetHashCode()
+        {
+            return Start.GetHashCode() ^ End.GetHashCode();
+        }
     }
 }

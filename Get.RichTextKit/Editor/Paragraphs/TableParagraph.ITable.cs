@@ -3,9 +3,10 @@ using System.Drawing;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
 using Get.RichTextKit.Editor.DataStructure.Table;
+using System.Diagnostics;
 
 namespace Get.RichTextKit.Editor.Paragraphs.Panel;
-
+[DebuggerDisplay("Table Paragraph ({Rows.Count} Rows x {Columns.Count} Columns)")]
 public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
 {
     public TableRowManager<Paragraph> Rows { get; }

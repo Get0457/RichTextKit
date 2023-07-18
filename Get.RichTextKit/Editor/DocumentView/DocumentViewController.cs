@@ -60,7 +60,7 @@ public partial class DocumentViewController
         if (selection.Start == 0 && !selection.IsRange && !deleteFront)
             // don't delete
             return;
-        DocumentView.OwnerDocument.Editor.ReplaceText(
+        var status = DocumentView.OwnerDocument.Editor.ReplaceText(
             selection.IsRange ? selection : new(
                 selection.Start,
                 deleteFront ? selection.Start + charCount : selection.Start - charCount,
@@ -69,10 +69,20 @@ public partial class DocumentViewController
             "".AsSpan(),
             deleteFront ? EditSemantics.ForwardDelete : EditSemantics.Backspace
         );
-        if (selection.IsRange || deleteFront)
-            MoveCaret(new(selection.Minimum));
-        else
-            MoveCaret(new(selection.Minimum - 1));
+        if (status.IsSuccess)
+        {
+            if (selection.IsRange || deleteFront)
+                MoveCaret(new(selection.Minimum));
+            else
+                MoveCaret(new(selection.Minimum - 1));
+        } else
+        {
+            if (status.FailToDeleteParent is Paragraph p)
+            {
+                var idx = p.GlobalInfo.CodePointIndex;
+                Select(new(idx, idx + p.CodePointLength, altPosition: true));
+            }
+        }
     }
     float? _ghostXCoordinate;
     public void MoveCaret(CaretPosition position) => Select(new(position));
@@ -204,12 +214,15 @@ public partial class DocumentViewController
     }
     public void InsertNewParagraph(Paragraph paragraph)
     {
-        Type(Document.NewParagraphSeparator.ToString());
-        DocumentView.OwnerDocument.Paragraphs.GlobalFromCodePointIndex(DocumentView.Selection.Range.EndCaretPosition, out var parent, out var paragraphIndex, out _);
-        DocumentView.OwnerDocument.UndoManager.Do(new UndoInsertParagraph(parent, paragraphIndex, paragraph));
-        DocumentView.OwnerDocument.Layout.Invalidate();
-        DocumentView.OwnerDocument.Layout.EnsureValid();
-        DocumentView.OwnerDocument.RequestRedraw();
+        using (DocumentView.OwnerDocument.UndoManager.OpenGroup("Insert New Paragraph"))
+        {
+            Type(Document.NewParagraphSeparator.ToString());
+            DocumentView.OwnerDocument.Paragraphs.GlobalFromCodePointIndex(DocumentView.Selection.Range.EndCaretPosition, out var parent, out var paragraphIndex, out _);
+            DocumentView.OwnerDocument.UndoManager.Do(new UndoInsertParagraph(parent, paragraphIndex, paragraph));
+            DocumentView.OwnerDocument.Layout.Invalidate();
+            DocumentView.OwnerDocument.Layout.EnsureValid();
+            DocumentView.OwnerDocument.RequestRedraw();
+        }
     }
     /// <summary>
     /// Hit Test relative to the view

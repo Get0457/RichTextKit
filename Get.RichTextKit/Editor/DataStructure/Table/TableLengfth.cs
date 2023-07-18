@@ -1,9 +1,12 @@
-﻿namespace Get.RichTextKit.Editor.DataStructure.Table;
+﻿using System.Diagnostics;
+
+namespace Get.RichTextKit.Editor.DataStructure.Table;
 public enum TableLengthMode {
     Pixel,
     Ratio,
     Auto
 }
+
 public readonly record struct TableLength(float Length, TableLengthMode Mode)
 {
     public bool IsRatioMode
@@ -23,4 +26,13 @@ public readonly record struct TableLength(float Length, TableLengthMode Mode)
     }
     public static TableLength Auto { get; } = new(default, TableLengthMode.Auto);
     public static TableLength OneRatio { get; } = new(1, TableLengthMode.Ratio);
+    public override string ToString()
+        => Mode switch
+        {
+            TableLengthMode.Ratio => $"{Length}*",
+            TableLengthMode.Pixel => Length.ToString(),
+            TableLengthMode.Auto => "Auto",
+            _ => "Invalid Table Length"
+        };
+        
 }
