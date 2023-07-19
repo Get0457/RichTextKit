@@ -25,7 +25,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         _columnCount = initialCols;
         foreach (var _ in ..(initialRows * initialCols))
         {
-            Children.Add(new VerticalParagraph(style) { Margin = new(10)});
+            Children.Add(new VerticalParagraph(style) { Margin = new(10) });
         }
         foreach (var _ in ..initialRows)
         {
@@ -90,7 +90,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
                 // Skips layout for those rows and columns we already layout
                 if (!(colsRequestedWidth[colIdx].HasValue || rowsRequestedHeight[rowIdx].HasValue))
                     child.Layout(parentInfo with { AvaliableWidth = ColumnsWidth[colIdx] });
-                
+
                 child.LocalInfo = new(
                     ContentPosition: OffsetMargin(new(ColumnsPos[colIdx], RowsPos[rowIdx]), child.Margin),
                     CodePointIndex: cpiOffset,
@@ -161,7 +161,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
 
     public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
     {
-        
+
     }
     public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
     {
@@ -308,4 +308,36 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         canvas.Restore();
     }
     public override bool IsChildrenReadOnly => true;
+    public override SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection)
+    {
+        if (IsRangeWithinTheSameChildParagraph(selection, out _, out _))
+            return base.GetSelectionInfo(parentInfo, selection);
+        else
+        {
+            var p1 = LocalChildrenFromCodePointIndex(selection.MinimumCaretPosition, out _);
+            var p2 = LocalChildrenFromCodePointIndex(selection.MaximumCaretPosition, out _);
+            TextRange newSelection = new(p1.LocalInfo.CodePointIndex, p2.LocalInfo.CodePointIndex + p2.CodePointLength, true);
+            return base.GetSelectionInfo(parentInfo, newSelection) with { OriginalRange = selection };
+        }
+    }
+    protected override IEnumerable<SubRun> GetLocalChildrenInteractingRange(TextRange selection)
+    {
+        if (IsRangeWithinTheSameChildParagraph(selection, out _, out _))
+            foreach (var lcir in base.GetLocalChildrenInteractingRange(selection))
+                yield return lcir;
+        else
+        {
+            var (row1, col1) = ResolveIndex(LocalChildrenFromCodePointIndexAsIndex(selection.MinimumCaretPosition, out _));
+            var (row2, col2) = ResolveIndex(LocalChildrenFromCodePointIndexAsIndex(selection.MaximumCaretPosition, out _)); 
+            foreach (int row in (row1..row2).IncludeEnd())
+            {
+                foreach (int col in (col1..col2).IncludeEnd())
+                {
+                    var idx = ResolveIndexUnchekced(row, col);
+                    var para = Children[idx];
+                    yield return new SubRun(idx, 0, para.CodePointLength, false);
+                }
+            }
+        }
+    }
 }

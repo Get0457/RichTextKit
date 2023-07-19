@@ -105,7 +105,8 @@ public abstract class Paragraph : IRun, IParentOrParagraph
         selection, null, GetCaretInfo(selection.StartCaretPosition), GetCaretInfo(selection.EndCaretPosition),
         this,
         GetInteractingRuns(parentInfo, selection),
-        GetInteractingRunsRecursive(parentInfo, selection)
+        GetInteractingRunsRecursive(parentInfo, selection),
+        GetBFSInteractingRuns(parentInfo, selection)
     );
     // So protected members can access the method
     protected static IEnumerable<SubRunInfo> GetInteractingRuns(Paragraph para, ParentInfo parentInfo, TextRange selection)
@@ -114,14 +115,33 @@ public abstract class Paragraph : IRun, IParentOrParagraph
     {
         yield return new(
             parentInfo, selection.Minimum, Math.Abs(selection.Length),
-            selection.Minimum <= 0 && selection.Maximum >= CodePointLength
+            !(selection.Minimum <= 0 && selection.Maximum >= CodePointLength)
         );
     }
     protected static IEnumerable<SubRunInfo> GetInteractingRunsRecursive(Paragraph para, ParentInfo parentInfo, TextRange selection)
         => para.GetInteractingRunsRecursive(parentInfo, selection);
     protected virtual IEnumerable<SubRunInfo> GetInteractingRunsRecursive(ParentInfo parentInfo, TextRange selection)
         => GetInteractingRuns(parentInfo, selection);
-
+    public IEnumerable<SubRunBFSInfo> GetBFSInteractingRuns(ParentInfo parentInfo, TextRange selection)
+    {
+        foreach (var subRun in GetInteractingRuns(parentInfo, selection))
+        {
+            // We can do this because IEnumerable is lazy so the function will actually not evaluate here
+            var childEnumerable =
+                subRun.Paragraph == this ? Enumerable.Empty<SubRunBFSInfo>() :
+                subRun.Paragraph.GetBFSInteractingRuns(
+                    subRun.ParentInfo, new(subRun.Offset, subRun.Offset + subRun.Length)
+                );
+            if (subRun.Partial)
+            {
+                foreach (var sr2 in childEnumerable)
+                    yield return sr2;
+            } else
+            {
+                yield return new SubRunBFSInfo(subRun, childEnumerable);
+            }
+        }
+    }
     /// <summary>
     /// Retrieves a list of all valid caret positions
     /// </summary>

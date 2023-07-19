@@ -25,50 +25,23 @@ public class UndoParagraphSetting<T> : UndoUnit<Document, DocumentViewUpdateInfo
     public override void Do(Document context)
     {
         SavedValue = new();
-        SetStyles(context.Paragraphs, range);
+        var bfsRuns = context.Paragraphs.GetBFSInteractingRunsRecursive(range);
+        SetStyles(bfsRuns);
         context.RequestRedraw();
+    }
+    void SetStyles(IEnumerable<SubRunBFSInfo> bfsRuns)
+    {
+        foreach (var run in bfsRuns)
+        {
+            Debug.WriteLine(run.SubRunInfo);
+            if (!ConfirmSetStyle(run.SubRunInfo.Paragraph))
+                SetStyles(run.NextLevelInfo);
+        }
     }
     public override void Redo(Document context)
     {
         base.Redo(context);
         NotifyInfo(new(NewSelection: range));
-    }
-    bool SetStyles(Paragraph para, TextRange range)
-    {
-        if (para is IParagraphCollection collection)
-        {
-            return SetStyles(collection, range);
-        }
-        else return ConfirmSetStyle(para);
-    }
-    bool SetStyles(IParagraphCollection parent, TextRange range)
-    {
-        if (parent is Paragraph para && range.Start <= 0 && range.End >= para.CodePointLength)
-        {
-            if (ConfirmSetStyle(para)) return true;
-        }
-        var idx1 = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(parent.Paragraphs.AsIReadOnlyList(), range.StartCaretPosition, out int cpi1);
-        var idx2 = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(parent.Paragraphs.AsIReadOnlyList(), range.EndCaretPosition, out int cpi2);
-        bool success = false;
-        if (idx1 == idx2)
-        {
-            success = SetStyles(parent.Paragraphs[idx1], new(cpi1, cpi2)) || success;
-        }
-        else
-        {
-
-            success = SetStyles(parent.Paragraphs[idx1], new(cpi1, parent.Paragraphs[idx1].CodePointLength)) || success;
-            for (int i = idx1 + 1; i < idx2; i++)
-            {
-                success = SetStyles(parent.Paragraphs[i], new(0, parent.Paragraphs[i].CodePointLength)) || success;
-            }
-            success = SetStyles(parent.Paragraphs[idx2], new(0, cpi2)) || success;
-        }
-        if (success) return true;
-
-        if (parent is Paragraph para2)
-            return ConfirmSetStyle(para2);
-        return false;
     }
     bool ConfirmSetStyle(Paragraph para)
     {

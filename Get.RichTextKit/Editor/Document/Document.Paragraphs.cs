@@ -71,6 +71,8 @@ public class DocumentParagraphs : IParagraphCollection
         => Document.Editor.GetSelectionInfo(range).InteractingRuns;
     public IEnumerable<SubRunInfo> GetInteractingRunsRecursive(TextRange range)
         => Document.Editor.GetSelectionInfo(range).RecursiveInteractingRuns;
+    public IEnumerable<SubRunBFSInfo> GetBFSInteractingRunsRecursive(TextRange range)
+        => Document.Editor.GetSelectionInfo(range).RecursiveBFSInteractingRuns;
     //public IEnumerable<SubRun> GetInterectingRuns(TextRange range)
     //    => from x in this.GetInterectingRuns(range.Start, range.Length) where x.Length >= 0 select x;
     public IEnumerable<Paragraph> GetInteractingParagraphs(TextRange range)
@@ -149,4 +151,8 @@ public readonly record struct SubRunInfo(ParentInfo ParentInfo, int Offset, int 
     public Paragraph Paragraph => Parent.Paragraphs[Index];
     public IParagraphCollection Parent => ParentInfo.Parent;
     public int Index => ParentInfo.Index;
+}
+public readonly record struct SubRunBFSInfo(SubRunInfo SubRunInfo, IEnumerable<SubRunBFSInfo> NextLevelInfo)
+{
+
 }

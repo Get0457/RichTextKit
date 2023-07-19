@@ -79,4 +79,19 @@ static class ExtensionHelper
             yield return i;
         }
     }
+    /// <summary>
+    /// Create Enumerable from Range
+    /// </summary>
+    /// <param name="range">The `range` to create the enumerable. `range.End` must not be from end. If `range.Start` is from end, the end value is infered from `range.End`</param>
+    /// <returns>Enumerable containing all sequence from start to end</returns>
+    /// <exception cref="ArgumentException"></exception>
+    public static IEnumerable<int> IncludeEnd(this Range range)
+    {
+        if (range.End.IsFromEnd) throw new ArgumentException("Range.End cannot start from the end value");
+        if (range.Start.IsFromEnd) range = (range.End.Value - range.Start.Value)..range.End.Value;
+        for (int i = range.Start.Value; i <= range.End.Value; i++)
+        {
+            yield return i;
+        }
+    }
 }

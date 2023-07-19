@@ -170,6 +170,10 @@ namespace Get.RichTextKit
                 return new CaretPosition(Start, false);
             }
         }
+        public CaretPosition MinimumCaretPosition
+            => End > Start ? StartCaretPosition : EndCaretPosition;
+        public CaretPosition MaximumCaretPosition
+            => End < Start ? StartCaretPosition : EndCaretPosition;
 
         /// <summary>
         /// Clamp the text range to a document length

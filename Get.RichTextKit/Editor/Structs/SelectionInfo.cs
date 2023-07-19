@@ -13,7 +13,8 @@ public readonly record struct SelectionInfo(
     CaretInfo EndCaretInfo,
     IParentOrParagraph SelectionInfoProvider,
     IEnumerable<SubRunInfo> InteractingRuns,
-    IEnumerable<SubRunInfo> RecursiveInteractingRuns
+    IEnumerable<SubRunInfo> RecursiveInteractingRuns,
+    IEnumerable<SubRunBFSInfo> RecursiveBFSInteractingRuns
 )
 {
     public bool IsSelectionChanged => NewSelection.HasValue;
