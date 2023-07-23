@@ -13,27 +13,39 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
     {
     }
 
-    public bool TryExtend(Document context, TextRange range, StyledText text, EditSemantics semantics, int imeCaretOffset)
+    public bool TryExtend(Document context, TextRange range, StyledText text, EditSemantics semantics, int imeCaretOffset, out ReplaceTextStatus status)
     {
         // Extend typing?
         if (semantics == EditSemantics.Typing && _info.Semantics == EditSemantics.Typing)
         {
             // Mustn't be replacing a range and must be at the correct position
             if (range.IsRange || _info.CodePointIndex + _info.NewLength != range.Start)
+            {
+                status = default;
                 return false;
+            }
 
             // Mustn't be inserting any paragraph breaks
             if (text.CodePoints.AsSlice().IndexOf(Document.NewParagraphSeparator) >= 0)
+            {
+                status = default;
                 return false;
+            }
 
             // The last unit in this group must be an insert text unit
             if (!(LastUnit is UndoInsertText insertUnit))
+            {
+                status = default;
                 return false;
+            }
 
             // Check if should extend (will return false on a word boundary 
             // to avoid extending for long spans of typed text)
             if (!insertUnit.ShouldAppend(context, text))
+            {
+                status = default;
                 return false;
+            }
 
             // Update the insert unit
             insertUnit.Append(context, text);
@@ -50,7 +62,7 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
 
             // Update the group
             _info.NewLength += text.Length;
-
+            status = ReplaceTextStatus.Success with { RequestedNewSelection = new(range.Maximum + text.Length) };
             return true;
         }
 
@@ -59,22 +71,31 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
         {
             // Mustn't be replacing a range and must be at the correct position
             if (_info.CodePointIndex + _info.NewLength != range.Start)
+            {
+                status = default;
                 return false;
+            }
 
             // Mustn't be inserting any paragraph breaks
             if (text.CodePoints.AsSlice().IndexOf(Document.NewParagraphSeparator) >= 0)
+            {
+                status = default;
                 return false;
+            }
 
             // The last unit in this group must be an insert text unit
             if (!(LastUnit is UndoInsertText insertUnit))
+            {
+                status = default;
                 return false;
+            }
 
             // The second last unit before must be a delete text unit.  
             // If we don't have one, create one.  This can happen when starting
             // to type in overtype mode at the very end of a paragraph
             if (Units.Count < 2 || (!(Units[Units.Count - 2] is UndoDeleteText deleteUnit)))
             {
-                deleteUnit = new UndoDeleteText(insertUnit.TextCodePointIndex, insertUnit.Offset, 0);
+                deleteUnit = new UndoDeleteText(insertUnit.TargetParagraphIndex, insertUnit.Offset, 0);
                 this.Insert(Units.Count - 1, deleteUnit);
             }
 
@@ -100,7 +121,7 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
             // Update the group
             _info.OldLength += deletedLength;
             _info.NewLength += text.Length;
-
+            status = ReplaceTextStatus.Success with { RequestedNewSelection = new(_info.CodePointIndex) };
             return true;
         }
 
@@ -110,15 +131,24 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
             // Get the last delete unit
             var deleteUnit = this.LastUnit as UndoDeleteText;
             if (deleteUnit == null)
+            {
+                status = default;
                 return false;
+            }
 
             // Must be deleting text immediately before
             if (range.End != _info.CodePointIndex)
+            {
+                status = default;
                 return false;
+            }
 
             // Extend the delete unit
             if (!deleteUnit.ExtendBackspace(context, range.Length))
+            {
+                status = default;
                 return false;
+            }
 
             // Fire change events
             context.FireDocumentChanging(new DocumentChangeInfo()
@@ -133,7 +163,7 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
             // Update self
             _info.CodePointIndex -= range.Length;
             _info.OldLength += range.Length;
-
+            status = ReplaceTextStatus.Success with { RequestedNewSelection = new(_info.CodePointIndex) };
             return true;
         }
 
@@ -143,15 +173,24 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
             // Get the last delete unit
             var deleteUnit = this.LastUnit as UndoDeleteText;
             if (deleteUnit == null)
+            {
+                status = default;
                 return false;
+            }
 
             // Must be deleting text immediately after
             if (range.Start != _info.CodePointIndex)
+            {
+                status = default;
                 return false;
+            }
 
             // Extend the delete unit
             if (!deleteUnit.ExtendForwardDelete(context, range.Length))
+            {
+                status = default;
                 return false;
+            }
 
             // Update self
             _info.OldLength += range.Length;
@@ -165,6 +204,7 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
                 Semantics = semantics,
             });
             context.FireDocumentChanged();
+            status = ReplaceTextStatus.Success with { RequestedNewSelection = new(range.Minimum) };
             return true;
         }
 
@@ -173,7 +213,10 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
         {
             // The last unit in this group must be an insert text unit
             if (!(LastUnit is UndoInsertText insertUnit))
+            {
+                status = default;
                 return false;
+            }
 
             // Replace the inserted text
             insertUnit.Replace(context, text);
@@ -193,9 +236,12 @@ class UndoReplaceTextGroup : UndoGroup<Document, DocumentViewUpdateInfo>
             _info.NewLength = text.Length;
             _info.ImeCaretOffset = imeCaretOffset;
 
+            status = new() { RequestedNewSelection = new(_info.CodePointIndex) };
             return true;
         }
 
+
+        status = default;
         return false;
     }
 

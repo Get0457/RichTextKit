@@ -9,16 +9,16 @@ namespace Get.RichTextKit.Editor.UndoUnits;
 
 class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
 {
-    public UndoDeleteText(int paraCodePointIndex, int offset, int length)
+    public UndoDeleteText(ParagraphIndex paraIndex, int offset, int length)
     {
-        _codePointIndex = paraCodePointIndex;
+        _paraIndex = paraIndex;
         _offset = offset;
         _length = length;
     }
 
     public override void Do(Document context)
     {
-        if (context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _) is not ITextParagraph tp) return;
+        if (context.Paragraphs[_paraIndex] is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
         _savedText = _textBlock.Extract(_offset, _length);
         _textBlock.DeleteText(_offset, _length);
@@ -28,13 +28,13 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
         base.Redo(context);
         context.Layout.Invalidate();
         context.Layout.EnsureValid();
-        var para = context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _);
+        var para = context.Paragraphs[_paraIndex];
         NotifyInfo(new(NewSelection: new(para.GlobalInfo.CodePointIndex + _offset)));
     }
     public override void Undo(Document context)
     {
         Paragraph para;
-        if ((para = context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _)) is not ITextParagraph tp) return;
+        if ((para = context.Paragraphs[_paraIndex]) is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
         _textBlock.InsertText(_offset, _savedText);
         var length = _savedText.Length;
@@ -45,7 +45,7 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
     public bool ExtendBackspace(Document context, int length)
     {
         Paragraph para;
-        if ((para = context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _)) is not ITextParagraph tp) return false;
+        if ((para = context.Paragraphs[_paraIndex]) is not ITextParagraph tp) return false;
         var _textBlock = tp.TextBlock;
         // Don't extend across paragraph boundaries
         if (_offset - length < 0)
@@ -66,7 +66,7 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
 
     public bool ExtendForwardDelete(Document context, int length)
     {
-        if (context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _) is not ITextParagraph tp) return false;
+        if (context.Paragraphs[_paraIndex] is not ITextParagraph tp) return false;
         var _textBlock = tp.TextBlock;
         // Don't extend across paragraph boundaries
         if (_offset + length > _textBlock.Length - 1)
@@ -85,7 +85,7 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
 
     public bool ExtendOvertype(Document context, int offset, int length)
     {
-        if (context.Paragraphs.GlobalChildrenFromCodePointIndex(new(_codePointIndex), out _, out _, out _) is not ITextParagraph tp) return false;
+        if (context.Paragraphs[_paraIndex] is not ITextParagraph tp) return false;
         var _textBlock = tp.TextBlock;
         // Don't extend across paragraph boundaries
         if (_offset + offset + length > _textBlock.Length - 1)
@@ -108,7 +108,7 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
         return true;
     }
 
-    int _codePointIndex;
+    ParagraphIndex _paraIndex;
     int _offset;
     int _length;
     StyledText _savedText;

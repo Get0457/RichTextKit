@@ -67,22 +67,24 @@ public partial class DocumentViewController
                 altPosition: false
             ),
             "".AsSpan(),
-            deleteFront ? EditSemantics.ForwardDelete : EditSemantics.Backspace
+            deleteFront ? EditSemantics.ForwardDelete : EditSemantics.Backspace,
+            isNonSelectionDeletion: !selection.IsRange
         );
-        if (status.IsSuccess)
-        {
-            if (selection.IsRange || deleteFront)
-                MoveCaret(new(selection.Minimum));
-            else
-                MoveCaret(new(selection.Minimum - 1));
-        } else
-        {
-            if (status.FailToDeleteParent is Paragraph p)
-            {
-                var idx = p.GlobalInfo.CodePointIndex;
-                Select(new(idx, idx + p.CodePointLength, altPosition: true));
-            }
-        }
+        Select(status.RequestedNewSelection);
+        //if (status.IsSuccess)
+        //{
+        //    if (selection.IsRange || deleteFront)
+        //        MoveCaret(new(selection.Minimum));
+        //    else
+        //        MoveCaret(new(selection.Minimum - 1));
+        //} else
+        //{
+        //    if (status.FailToDeleteParent is Paragraph p)
+        //    {
+        //        var idx = p.GlobalInfo.CodePointIndex;
+        //        Select(new(idx, idx + p.CodePointLength, altPosition: true));
+        //    }
+        //}
     }
     float? _ghostXCoordinate;
     public void MoveCaret(CaretPosition position) => Select(new(position));

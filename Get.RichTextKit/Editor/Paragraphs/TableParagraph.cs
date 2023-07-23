@@ -90,7 +90,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
                 // Skips layout for those rows and columns we already layout
                 if (!(colsRequestedWidth[colIdx].HasValue || rowsRequestedHeight[rowIdx].HasValue))
                     child.Layout(parentInfo with { AvaliableWidth = ColumnsWidth[colIdx] });
-
+                child.ParentInfo = new(this, ResolveIndexUnchekced(rowIdx, colIdx));
                 child.LocalInfo = new(
                     ContentPosition: OffsetMargin(new(ColumnsPos[colIdx], RowsPos[rowIdx]), child.Margin),
                     CodePointIndex: cpiOffset,
@@ -159,10 +159,6 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     }
     public override int DisplayLineCount => 1;
 
-    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
-    {
-
-    }
     public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
     {
         return false;
@@ -308,16 +304,16 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         canvas.Restore();
     }
     public override bool IsChildrenReadOnly => true;
-    public override SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection)
+    public override SelectionInfo GetSelectionInfo(TextRange selection)
     {
         if (IsRangeWithinTheSameChildParagraph(selection, out _, out _))
-            return base.GetSelectionInfo(parentInfo, selection);
+            return base.GetSelectionInfo(selection);
         else
         {
             var p1 = LocalChildrenFromCodePointIndex(selection.MinimumCaretPosition, out _);
             var p2 = LocalChildrenFromCodePointIndex(selection.MaximumCaretPosition, out _);
             TextRange newSelection = new(p1.LocalInfo.CodePointIndex, p2.LocalInfo.CodePointIndex + p2.CodePointLength, true);
-            return base.GetSelectionInfo(parentInfo, newSelection) with { OriginalRange = selection };
+            return base.GetSelectionInfo(newSelection) with { OriginalRange = selection };
         }
     }
     protected override IEnumerable<SubRun> GetLocalChildrenInteractingRange(TextRange selection)

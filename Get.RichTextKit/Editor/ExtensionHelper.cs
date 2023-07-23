@@ -37,7 +37,7 @@ static class ExtensionHelper
     /// <param name="length">The length to refer to. If null, it refers to the end range</param>
     /// <returns>Enumerable containing all sequence from start to end</returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static IEnumerable<int> GetEnumerable(Range range, int? length = null, int step = 1)
+    public static IEnumerable<int> Iterate(this Range range, int? length = null, int step = 1)
     {
         if (length is null)
         {
@@ -45,7 +45,14 @@ static class ExtensionHelper
             if (range.End.IsFromEnd)
                 throw new ArgumentException("Range.End cannot start from the end value");
         }
-        var (offset, len) = range.GetOffsetAndLength(length.Value);
+        int offset, len;
+        try
+        {
+            (offset, len) = range.GetOffsetAndLength(length.Value);
+        } catch
+        {
+            yield break;
+        }
         switch (step)
         {
             case > 0:
@@ -93,5 +100,11 @@ static class ExtensionHelper
         {
             yield return i;
         }
+    }
+    public static IEnumerable<(int Index, T Item)> WithIndex<T>(this IEnumerable<T> item)
+    {
+        int idx = 0;
+        foreach (var a in item)
+            yield return (idx++, a);
     }
 }

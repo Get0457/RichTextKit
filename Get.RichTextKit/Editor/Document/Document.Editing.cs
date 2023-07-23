@@ -38,8 +38,7 @@ public struct ReplaceTextStatus
 {
     public static ReplaceTextStatus Success { get; } = new() { IsSuccess = true };
     public bool IsSuccess { get; init; }
-    public IParagraphCollection? FailToDeleteParent { get; init; }
-    public Paragraph? FailToDeleteParagraph { get; init; }
+    public TextRange RequestedNewSelection { get; init; }
 }
 public partial class DocumentEditor
 {
@@ -56,7 +55,7 @@ public partial class DocumentEditor
     /// <param name="text">The text to replace with</param>
     /// <param name="semantics">Controls how undo operations are coalesced and view selections updated</param>"
     /// <param name="styleToUse">The style to use for the added text (optional)</param>
-    public ReplaceTextStatus ReplaceText(TextRange range, ReadOnlySpan<char> text, EditSemantics semantics, IStyle? styleToUse = null)
+    public ReplaceTextStatus ReplaceText(TextRange range, ReadOnlySpan<char> text, EditSemantics semantics, IStyle? styleToUse = null, bool isNonSelectionDeletion = false)
     {
         // Convert text to utf32
         Slice<int> codePoints;
@@ -70,7 +69,7 @@ public partial class DocumentEditor
         }
 
         // Do the work
-        return ReplaceText(range, codePoints, semantics, styleToUse);
+        return ReplaceText(range, codePoints, semantics, styleToUse, isNonSelectionDeletion);
     }
 
     /// <summary>
@@ -81,7 +80,7 @@ public partial class DocumentEditor
     /// <param name="text">The text to replace with</param>
     /// <param name="semantics">Controls how undo operations are coalesced and view selections updated</param>"
     /// <param name="styleToUse">The style to use for the added text (optional)</param>
-    public ReplaceTextStatus ReplaceText(TextRange range, ReadOnlySpan<int> text, EditSemantics semantics, IStyle? styleToUse = null)
+    public ReplaceTextStatus ReplaceText(TextRange range, ReadOnlySpan<int> text, EditSemantics semantics, IStyle? styleToUse = null, bool isNonSelectionDeletion = false)
     {
         // Convert text to utf32
         Slice<int> codePoints;
@@ -95,7 +94,7 @@ public partial class DocumentEditor
         }
 
         // Do the work
-        return ReplaceText(range, codePoints, semantics, styleToUse);
+        return ReplaceText(range, codePoints, semantics, styleToUse, isNonSelectionDeletion);
     }
 
     /// <summary>
@@ -106,7 +105,7 @@ public partial class DocumentEditor
     /// <param name="codePoints">The text to replace with</param>
     /// <param name="semantics">Controls how undo operations are coalesced and view selections updated</param>"
     /// <param name="styleToUse">The style to use for the added text (optional)</param>
-    public ReplaceTextStatus ReplaceText(TextRange range, Slice<int> codePoints, EditSemantics semantics, IStyle? styleToUse = null)
+    public ReplaceTextStatus ReplaceText(TextRange range, Slice<int> codePoints, EditSemantics semantics, IStyle? styleToUse = null, bool isNonSelectionDeletion = false)
     {
         Document.Layout.EnsureValid();
         // Check range is valid
@@ -127,7 +126,7 @@ public partial class DocumentEditor
 
         var styledText = new StyledText(codePoints);
         styledText.ApplyStyle(0, styledText.Length, styleToUse);
-        return ReplaceTextInternal(range, styledText, semantics, -1);
+        return ReplaceTextInternal(range, styledText, semantics, -1, isNonSelectionDeletion);
     }
 
     /// <summary>
@@ -138,7 +137,7 @@ public partial class DocumentEditor
     /// <param name="codePoints">The text to replace with</param>
     /// <param name="semantics">Controls how undo operations are coalesced and view selections updated</param>"
     /// <param name="styleToUse">The style to use for the added text (optional)</param>
-    public ReplaceTextStatus ReplaceText(TextRange range, StyledText styledText, EditSemantics semantics)
+    public ReplaceTextStatus ReplaceText(TextRange range, StyledText styledText, EditSemantics semantics, bool isNonSelectionDeletion = false)
     {
         // Check range is valid
         if (range.Minimum < 0 || range.Maximum > Document.Layout.Length)
@@ -147,7 +146,7 @@ public partial class DocumentEditor
         if (IsImeComposing)
             FinishImeComposition();
 
-        return ReplaceTextInternal(range, styledText, semantics, -1);
+        return ReplaceTextInternal(range, styledText, semantics, -1, isNonSelectionDeletion);
     }
     /// <summary>
     /// Internal helper to replace text creating an undo unit
@@ -156,7 +155,7 @@ public partial class DocumentEditor
     /// <param name="text">The replacement text</param>
     /// <param name="semantics">The edit semantics of the change</param>
     /// <param name="imeCaretOffset">The position of the IME caret relative to the start of the range</param>
-    ReplaceTextStatus ReplaceTextInternal(TextRange range, StyledText text, EditSemantics semantics, int imeCaretOffset)
+    ReplaceTextStatus ReplaceTextInternal(TextRange range, StyledText text, EditSemantics semantics, int imeCaretOffset, bool isNonSelectionDeletion)
     {
         // Quit if redundant
         if (!range.IsRange && text.Length == 0)
@@ -175,9 +174,8 @@ public partial class DocumentEditor
 
         // Try to extend the last undo operation
         if (Document.UndoManager.GetUnsealedUnit() is UndoReplaceTextGroup group &&
-            group.TryExtend(Document, range, text, semantics, imeCaretOffset))
-            return ReplaceTextStatus.Success;
-        ReplaceTextStatus status;
+            group.TryExtend(Document, range, text, semantics, imeCaretOffset, out var status))
+            return status;
         // Wrap all edits in an undo group.  Note this is a custom
         // undo group that also fires the DocumentChanged notification
         // to views.
@@ -187,7 +185,12 @@ public partial class DocumentEditor
             // Delete range (if any)
             if (range.Length != 0)
             {
-                status = DeleteInternal(range);
+                status = DeleteInternal(new(range, isNonSelectionDeletion ? semantics switch
+                {
+                    EditSemantics.ForwardDelete => DeleteModes.Forward,
+                    EditSemantics.Backspace => DeleteModes.Backward,
+                    _ => DeleteModes.Selection
+                } : DeleteModes.Selection));
             }
             else status = ReplaceTextStatus.Success;
             if (!status.IsSuccess) return status;
@@ -215,82 +218,90 @@ public partial class DocumentEditor
     /// Delete a section of the document
     /// </summary>
     /// <param name="range">The range to be deleted</param>
-    ReplaceTextStatus DeleteInternal(TextRange range)
+    ReplaceTextStatus DeleteInternal(DeleteInfo range)
     {
         ReplaceTextStatus status = ReplaceTextStatus.Success;
-        // Iterate over the sections to be deleted
-        IParagraphCollection? joinParent = null;
-        int joinParagraph = -1;
-        SubRunInfo joinSubRun = default;
-        foreach (var subRun in Document.Paragraphs.GetIntersectingRunsRecursiveReverse(range.Start, range.Length, stopOnFullSelection: true))
+        if (Document.rootParagraph.DeletePartial(range, out var requestedSelection, Document.UndoManager))
         {
-            Debug.Assert(joinParagraph == -1);
-
-            // Is it a partial paragraph deletion?
-            if (subRun.Partial)
-            {
-                // Yes...
-
-                // Get the paragraph
-                var para = subRun.Paragraph;
-
-                // If we're deleting paragraph separator at the the end 
-                // of this paragraph then remember this paragraph needs to 
-                // be joined with the next paragraph after any intervening 
-                // paragraphs have been deleted
-                if (subRun.Offset + subRun.Length >= para.CodePointLength)
-                {
-                    // If deleting paragraph at the end, do not delete
-                    if (!(subRun.Index >= 0 && subRun.Index + 1 < subRun.Parent.Paragraphs.Count))
-                    {
-                        continue;
-                    }
-                    Debug.Assert(joinParagraph == -1);
-
-                    joinParagraph = subRun.Index;
-                    joinParent = subRun.Parent;
-                    joinSubRun = subRun;
-                }
-                else
-                    // Delete the text if not going to join with another paragraph
-                    para.DeletePartial(Document.UndoManager, subRun);
-            }
-            else if (!subRun.Parent.IsChildrenReadOnly)
-            {
-                if (subRun.Parent.Paragraphs.Count > 1)
-                {
-                    // Remove entire paragraph
-                    Document.UndoManager.Do(new UndoDeleteParagraph(subRun.Parent, subRun.Index));
-                }
-                else
-                {
-                    var para = new TextParagraph(Paragraphs[0].EndStyle);
-                    // Remove entire paragraph
-                    Document.UndoManager.Do(new UndoDeleteParagraph(subRun.Parent, subRun.Index));
-                    // Add a dummy paragraph
-                    Document.UndoManager.Do(new UndoInsertParagraph(subRun.Parent, 0, para));
-                }
-            }
-            else
-            {
-                status = new() { IsSuccess = false, FailToDeleteParent = subRun.Parent, FailToDeleteParagraph = subRun.Paragraph };
-                return status;
-            }
-        }
-
-        // If the deletion started mid paragraph and crossed into
-        // subsequent paragraphs then we need to join the paragraphs
-        if (joinParagraph >= 0 && joinParagraph + 1 < joinParent.Paragraphs.Count)
+            status = status with { IsSuccess = true, RequestedNewSelection = requestedSelection };
+        } else
         {
-            // Get both paragraphs
-            var firstPara = joinParent.Paragraphs[joinParagraph];
-            var secondPara = joinParent.Paragraphs[joinParagraph + 1];
-            if (firstPara.CanJoinWith(secondPara))
-            {
-                firstPara.DeletePartial(Document.UndoManager, joinSubRun);
-                firstPara.TryJoin(Document.UndoManager, joinParagraph);
-            }
+            status = status with { IsSuccess = false, RequestedNewSelection = requestedSelection };
         }
+        
+        //// Iterate over the sections to be deleted
+        //IParagraphCollection? joinParent = null;
+        //int joinParagraph = -1;
+        //SubRunInfo joinSubRun = default;
+        //foreach (var subRun in Document.Paragraphs.GetIntersectingRunsRecursiveReverse(range.Start, range.Length, stopOnFullSelection: true))
+        //{
+        //    Debug.Assert(joinParagraph == -1);
+
+        //    // Is it a partial paragraph deletion?
+        //    if (subRun.Partial)
+        //    {
+        //        // Yes...
+
+        //        // Get the paragraph
+        //        var para = subRun.Paragraph;
+
+        //        // If we're deleting paragraph separator at the the end 
+        //        // of this paragraph then remember this paragraph needs to 
+        //        // be joined with the next paragraph after any intervening 
+        //        // paragraphs have been deleted
+        //        if (subRun.Offset + subRun.Length >= para.CodePointLength)
+        //        {
+        //            // If deleting paragraph at the end, do not delete
+        //            if (!(subRun.Index >= 0 && subRun.Index + 1 < subRun.Parent.Paragraphs.Count))
+        //            {
+        //                continue;
+        //            }
+        //            Debug.Assert(joinParagraph == -1);
+
+        //            joinParagraph = subRun.Index;
+        //            joinParent = subRun.Parent;
+        //            joinSubRun = subRun;
+        //        }
+        //        else
+        //            // Delete the text if not going to join with another paragraph
+        //            para.DeletePartial(Document.UndoManager, subRun);
+        //    }
+        //    else if (!subRun.Parent.IsChildrenReadOnly)
+        //    {
+        //        if (subRun.Parent.Paragraphs.Count > 1)
+        //        {
+        //            // Remove entire paragraph
+        //            Document.UndoManager.Do(new UndoDeleteParagraph(subRun.Parent, subRun.Index));
+        //        }
+        //        else
+        //        {
+        //            var para = new TextParagraph(Paragraphs[0].EndStyle);
+        //            // Remove entire paragraph
+        //            Document.UndoManager.Do(new UndoDeleteParagraph(subRun.Parent, subRun.Index));
+        //            // Add a dummy paragraph
+        //            Document.UndoManager.Do(new UndoInsertParagraph(subRun.Parent, 0, para));
+        //        }
+        //    }
+        //    else
+        //    {
+        //        status = new() { IsSuccess = false, FailToDeleteParent = subRun.Parent, FailToDeleteParagraph = subRun.Paragraph };
+        //        return status;
+        //    }
+        //}
+
+        //// If the deletion started mid paragraph and crossed into
+        //// subsequent paragraphs then we need to join the paragraphs
+        //if (joinParagraph >= 0 && joinParagraph + 1 < joinParent.Paragraphs.Count)
+        //{
+        //    // Get both paragraphs
+        //    var firstPara = joinParent.Paragraphs[joinParagraph];
+        //    var secondPara = joinParent.Paragraphs[joinParagraph + 1];
+        //    if (firstPara.CanJoinWith(secondPara))
+        //    {
+        //        firstPara.DeletePartial(Document.UndoManager, joinSubRun);
+        //        firstPara.TryJoin(Document.UndoManager, joinParagraph);
+        //    }
+        //}
 
         // Layout is now invalid
         Document.Layout.EnsureValid();
@@ -357,7 +368,7 @@ public partial class DocumentEditor
             {
                 if (paraA is ITextParagraph)
                     Document.UndoManager.Do(new UndoInsertText(
-                        paraA.GlobalInfo.CodePointIndex,
+                        paraA.GlobalParagraphIndex,
                         indexInParagraph,
                         text.Extract(firstPart.Offset, firstPart.Length)
                     ));
@@ -370,7 +381,7 @@ public partial class DocumentEditor
             if (lastPart.Length != 0)
             {
                 if (paraB is ITextParagraph)
-                    Document.UndoManager.Do(new UndoInsertText(paraB.GlobalInfo.CodePointIndex, 0, text.Extract(lastPart.Offset, lastPart.Length)));
+                    Document.UndoManager.Do(new UndoInsertText(paraB.GlobalParagraphIndex, 0, text.Extract(lastPart.Offset, lastPart.Length)));
                 else endingAppendingIdx = parts.Length;
             }
 
@@ -395,7 +406,7 @@ public partial class DocumentEditor
             {
                 if (tp.TextBlock.Length == indexInParagraph)
                     indexInParagraph--;
-                Document.UndoManager.Do(new UndoInsertText(para.GlobalInfo.CodePointIndex, indexInParagraph, text));
+                Document.UndoManager.Do(new UndoInsertText(para.GlobalParagraphIndex, indexInParagraph, text));
             }
             else
             {
@@ -445,5 +456,5 @@ public partial class DocumentEditor
     public CaretInfo GetCaretInfo(CaretPosition position)
         => Document.rootParagraph.GetCaretInfo(position);
     public SelectionInfo GetSelectionInfo(TextRange range)
-        => Document.rootParagraph.GetSelectionInfo(new(Document.rootParagraph, 0), range);
+        => Document.rootParagraph.GetSelectionInfo(range);
 }

@@ -35,9 +35,10 @@ public partial class VerticalParagraph : PanelParagraph
         int cpiOffset = 0;
         int displayLineOffset = 0;
         int lineOffset = 0;
-        foreach (var child in Children)
+        foreach (var (idx, child) in Children.WithIndex())
         {
             child.Layout(parentInfo);
+            child.ParentInfo = new(this, idx);
             child.LocalInfo = new(
                 ContentPosition: OffsetMargin(new(0, YOffset), child.Margin),
                 CodePointIndex: cpiOffset,
@@ -52,10 +53,6 @@ public partial class VerticalParagraph : PanelParagraph
     }
     public override int DisplayLineCount => 1;
 
-    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
-    {
-        //UndoManager.Do(new UndoDeleteText(_textBlock, range.Offset, range.Length));
-    }
     public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
     {
         return false;

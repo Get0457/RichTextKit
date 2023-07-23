@@ -169,12 +169,34 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
 
     // Private attributes
     readonly TextBlock _textBlock;
-
-    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
+    public override bool CanDeletePartial(DeleteInfo delInfo, out TextRange requestedSelection)
     {
-        if (range.Offset + range.Length >= /* last index */ _textBlock.Length)
-            range = range with { Length = _textBlock.Length - range.Offset };
-        UndoManager.Do(new UndoDeleteText(GlobalInfo.CodePointIndex, range.Offset, range.Length));
+        requestedSelection = new(delInfo.Range.MinimumCaretPosition);
+        return true;
+    }
+    IStyle _savedParaEndingStyle;
+    public override bool DeletePartial(DeleteInfo delInfo, out TextRange requestedSelection, UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
+    {
+        _savedParaEndingStyle = _textBlock.GetStyleAtOffset(_textBlock.CaretIndicies[^1]);
+        var range = delInfo.Range;
+        var offset = range.Minimum;
+        if (offset < 0)
+            offset = 0;
+        var length = range.Maximum - offset;
+        if (offset + length > _textBlock.Length)
+            length = _textBlock.Length - offset;
+        UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, offset, length));
+        requestedSelection = new TextRange(offset, altPosition: false);
+        return true;
+    }
+    protected override void EnsureParagraphEnding(UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
+    {
+        if (_textBlock.Extract(_textBlock.Length - 1, 1).CodePoints[0] != Document.NewParagraphSeparator)
+        {
+            var styledText = new StyledText();
+            styledText.AddText(Document.NewParagraphSeparator.ToString(), _savedParaEndingStyle);
+            UndoManager.Do(new UndoInsertText(GlobalParagraphIndex, _textBlock.Length - 1, styledText));
+        }
     }
     public override bool CanJoinWith(Paragraph next)
     {
@@ -182,7 +204,7 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     }
     public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
     {
-        UndoManager.Do(new UndoJoinTextParagraphs(GlobalInfo.CodePointIndex));
+        UndoManager.Do(new UndoJoinTextParagraphs(GlobalParagraphIndex));
         return true;
     }
     public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
@@ -194,7 +216,7 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
 
         var paraB = new TextParagraph(paraA.TextBlock.Copy(splitIndex, CodePointLength));
         if (splitIndex != CodePointLength - 1)
-            UndoManager.Do(new UndoDeleteText(paraA.GlobalInfo.CodePointIndex, splitIndex, TextBlock.Length - splitIndex - 1));
+            UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, splitIndex, TextBlock.Length - splitIndex - 1));
         return paraB;
     }
 

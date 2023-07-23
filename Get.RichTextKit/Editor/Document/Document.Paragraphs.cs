@@ -38,6 +38,44 @@ public class DocumentParagraphs : IParagraphCollection
     readonly Document Document;
 
     public Paragraph this[int index] => Document.rootParagraph.Children[index];
+    public Paragraph this[ParagraphIndex index]
+    {
+        get {
+            IParagraphCollection p = Document.rootParagraph;
+            foreach (var (recursionLevel, currIndex) in index.RecursiveIndexArray.WithIndex())
+            {
+                if (p.Paragraphs[currIndex] is not IParagraphCollection newParent)
+                {
+                    if (recursionLevel + 1 != index.RecursiveIndexArray.Length)
+                        throw new ArgumentOutOfRangeException(nameof(index));
+                    return p.Paragraphs[currIndex];
+                }
+                p = newParent;
+            }
+            return (Paragraph)p;
+        }
+    }
+    public Paragraph GetParentAndChild(ParagraphIndex index, out IParagraphCollection parent, out int paraIndex)
+    {
+        IParagraphCollection oldPraent = Document.rootParagraph;
+        IParagraphCollection currParent = Document.rootParagraph;
+        foreach (var (recursionLevel, currIndex) in index.RecursiveIndexArray.WithIndex())
+        {
+            if (currParent.Paragraphs[currIndex] is not IParagraphCollection newParent)
+            {
+                if (recursionLevel + 1 != index.RecursiveIndexArray.Length)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                parent = currParent;
+                paraIndex = currIndex;
+                return currParent.Paragraphs[currIndex];
+            }
+            oldPraent = currParent;
+            currParent = newParent;
+        }
+        parent = oldPraent;
+        paraIndex = index.RecursiveIndexArray[^1];
+        return (Paragraph)currParent;
+    }
     public int Count => Document.rootParagraph.Children.Count;
     public void Add(Paragraph paragraph) => Document.rootParagraph.Children.Add(paragraph);
     bool IParagraphCollection.IsChildrenReadOnly => false;

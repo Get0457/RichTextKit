@@ -21,6 +21,10 @@ class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     {
         _paragraph = _parent.Paragraphs[_index];
         _parent.Paragraphs.RemoveAt(_index);
+        foreach (var i in _index.._parent.Paragraphs.Count)
+        {
+            _parent.Paragraphs[i].ParentInfo = _parent.Paragraphs[i].ParentInfo with { Index = i };
+        }
         _paragraph.OnParagraphRemoved(context);
     }
     public override void Redo(Document context)
@@ -33,6 +37,10 @@ class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     public override void Undo(Document context)
     {
         _parent.Paragraphs.Insert(_index, _paragraph);
+        foreach (var i in _index.._parent.Paragraphs.Count)
+        {
+            _parent.Paragraphs[i].ParentInfo = _parent.Paragraphs[i].ParentInfo with { Index = i };
+        }
         _paragraph.OnParagraphAdded(context);
         context.Layout.InvalidateAndValid();
         NotifyInfo(new(NewSelection: new(_paragraph.GlobalInfo.CodePointIndex + _paragraph.CodePointLength)));

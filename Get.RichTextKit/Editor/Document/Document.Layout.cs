@@ -75,55 +75,44 @@ public partial class DocumentLayout : INotifyPropertyChanged
         int displayLineIndex = 0;
 
         _measuredWidth = 0;
-
-        // Layout paragraphs
-        for (int i = 0; i < Document.Paragraphs.Count; i++)
+        var para = Document.rootParagraph;
+        para.Layout(new LayoutParentInfo(
+            PageWidth -
+            Margin.Left -
+            Margin.Right,
+            LineWrap,
+            LineNumberMode: true
+        ));
+        para.GlobalInfo = para.LocalInfo = new(
+            ContentPosition: new(Margin.Left + para.Margin.Left, yCoord + Math.Max(para.Margin.Top, prevYMargin)),
+            CodePointIndex: codePointIndex,
+            LineIndex: lineIndex,
+            DisplayLineIndex: displayLineIndex
+        );
+        RecursiveUpdateChild(para);
+        static void RecursiveUpdateChild(Paragraph para)
         {
-            // Get the paragraph
-            var para = Document.Paragraphs[i];
-
-            // Layout
-            para.Layout(new LayoutParentInfo(
-                PageWidth - 
-                Margin.Left -
-                Margin.Right,
-                LineWrap,
-                LineNumberMode: false
-            ));
-
-            // Position
-            para.GlobalInfo = para.LocalInfo = new(
-                ContentPosition: new(Margin.Left + para.Margin.Left, yCoord + Math.Max(para.Margin.Top, prevYMargin)),
-                CodePointIndex: codePointIndex,
-                LineIndex: lineIndex,
-                DisplayLineIndex: displayLineIndex
-            );
-
-            RecursiveUpdateChild(para);
-            static void RecursiveUpdateChild(Paragraph para)
+            if (para is IParagraphPanel panel)
             {
-                if (para is IParagraphPanel panel)
+                foreach (var child in panel.Children)
                 {
-                    foreach (var child in panel.Children)
-                    {
-                        child.GlobalInfo = child.LocalInfo.OffsetToGlobal(para.GlobalInfo);
-                        RecursiveUpdateChild(child);
-                    }
+                    child.GlobalInfo = child.LocalInfo.OffsetToGlobal(para.GlobalInfo);
+                    RecursiveUpdateChild(child);
                 }
             }
-
-            // Width
-            var paraWidth = para.ContentWidth + para.Margin.Left + para.Margin.Top;
-            if (paraWidth > _measuredWidth)
-                _measuredWidth = paraWidth;
-
-            // Update positions
-            yCoord = para.GlobalInfo.ContentPosition.Y + para.ContentHeight + _Spacing;
-            prevYMargin = para.Margin.Bottom;
-            codePointIndex += para.CodePointLength;
-            lineIndex += para.LineCount;
-            displayLineIndex += para.DisplayLineCount;
         }
+        // Layout paragraphs
+        // Width
+            var paraWidth = para.ContentWidth + para.Margin.Left + para.Margin.Top;
+        if (paraWidth > _measuredWidth)
+            _measuredWidth = paraWidth;
+
+        // Update positions
+        yCoord = para.GlobalInfo.ContentPosition.Y + para.ContentHeight + _Spacing;
+        prevYMargin = para.Margin.Bottom;
+        codePointIndex += para.CodePointLength;
+        lineIndex += para.LineCount;
+        displayLineIndex += para.DisplayLineCount;
 
         // Update the totals
         _measuredWidth += Margin.Left + Margin.Right;

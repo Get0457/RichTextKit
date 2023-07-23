@@ -10,6 +10,8 @@ using HarfBuzzSharp;
 using System.Reflection;
 using Get.RichTextKit.Styles;
 using System.Diagnostics;
+using Get.RichTextKit.Editor.DocumentView;
+using Get.RichTextKit.Editor.UndoUnits;
 
 namespace Get.RichTextKit.Editor.Paragraphs.Panel;
 
@@ -180,34 +182,34 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
             r = 0..(r.End.Value - r.Start.Value - len);
         }
     }
-    public override SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection)
+    public override SelectionInfo GetSelectionInfo(TextRange selection)
     {
         if (IsRangeWithinTheSameChildParagraph(selection, out var paraIndex, out var newRange))
-            return Children[paraIndex].GetSelectionInfo(new(this, paraIndex), newRange);
+            return Children[paraIndex].GetSelectionInfo(newRange);
         else
-            return base.GetSelectionInfo(parentInfo, selection);
+            return base.GetSelectionInfo(selection);
     }
     protected virtual IEnumerable<SubRun> GetLocalChildrenInteractingRange(TextRange selection)
-        => Children.AsIReadOnlyList().LocalGetInterectingRuns(selection.Minimum, selection.Length);
-    protected override IEnumerable<SubRunInfo> GetInteractingRuns(ParentInfo parentInfo, TextRange selection)
+        => Children.AsIReadOnlyList().LocalGetInterectingRuns(selection);
+    protected override IEnumerable<SubRunInfo> GetInteractingRuns(TextRange selection)
     {
         var paraIdx1 = LocalChildrenFromCodePointIndexAsIndex(selection.StartCaretPosition, out int cpi1);
         if (IsRangeWithinTheSameChildParagraph(selection, out var paraIndex, out var newRange))
-            foreach (var subRun in GetInteractingRuns(Children[paraIndex], new(this, paraIndex), newRange))
+            foreach (var subRun in GetInteractingRuns(Children[paraIndex], newRange))
                 yield return subRun;
         else
             foreach (var subRun in GetLocalChildrenInteractingRange(selection))
                 yield return new SubRunInfo(new(this, subRun.Index), subRun.Offset, subRun.Length, subRun.Partial);
     }
-    protected override IEnumerable<SubRunInfo> GetInteractingRunsRecursive(ParentInfo parentInfo, TextRange selection)
+    protected override IEnumerable<SubRunInfo> GetInteractingRunsRecursive(TextRange selection)
     {
         if (IsRangeWithinTheSameChildParagraph(selection, out var paraIndex, out var newRange))
-            foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[paraIndex], new(this, paraIndex), newRange))
+            foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[paraIndex], newRange))
                 yield return subRunRecursive;
         else
             foreach (var subRun in GetLocalChildrenInteractingRange(selection))
             {
-                foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[subRun.Index], parentInfo, new(subRun.Offset, subRun.Offset + subRun.Length)))
+                foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[subRun.Index], new(subRun.Offset, subRun.Offset + subRun.Length)))
                     yield return subRunRecursive;
             }
     }
@@ -224,5 +226,172 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         paraIndex = default;
         newRange = default;
         return false;
+    }
+    bool DeletePartialImplement(bool doDelete, DeleteInfo delInfo, out TextRange requestedSelection, UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
+    {
+        if (IsChildrenReadOnly)
+        {
+            if (
+                (delInfo.Range.Maximum >= CodePointLength && delInfo.DeleteMode is DeleteModes.Backward) ||
+                (delInfo.Range.Minimum <= 0 && delInfo.DeleteMode is DeleteModes.Forward)
+            )
+            {
+                requestedSelection = new TextRange(0, CodePointLength, altPosition: true);
+                return false;
+            }
+        }
+        if (IsRangeWithinTheSameChildParagraph(delInfo.Range, out var paraIdx, out var newRange))
+        {
+            if (doDelete)
+            {
+                var child = Children[paraIdx];
+                var savedLength = child.CodePointLength;
+                var success = child.DeletePartial(delInfo with { Range = newRange }, out var returnRange, UndoManager);
+                child.LocalInfo.OffsetFromThis(ref returnRange);
+                requestedSelection = returnRange;
+                return true;
+            } else
+            {
+                if (!Children[paraIdx].CanDeletePartial(delInfo with { Range = newRange }, out requestedSelection))
+                    return false;
+                // if at the end of previous paragraph, and delete backward
+                if (newRange.Maximum + 1 >= Children[paraIdx].CodePointLength && delInfo.DeleteMode is DeleteModes.Backward)
+                {
+                    Debug.Assert(paraIdx + 1 < Children.Count);
+                    return Children[paraIdx].CanJoinWith(Children[paraIdx + 1]);
+                }// if at the end of this paragraph, and delete forward
+                if (newRange.Minimum <= 0 && delInfo.DeleteMode is DeleteModes.Forward)
+                {
+                    Debug.Assert(paraIdx >= 1);
+                    return Children[paraIdx - 1].CanJoinWith(Children[paraIdx]);
+                }
+                return true;
+            }
+        }
+        else if (IsChildrenReadOnly)
+        {
+            requestedSelection = new TextRange(0, CodePointLength, altPosition: true);
+            return false;
+        }
+        else
+        {
+            var interactingRanges = GetInteractingRuns(delInfo.Range).ToArray();
+            bool isFailed = false;
+            var para = interactingRanges[0].Paragraph;
+            TextRange range = delInfo.Range;
+            if (interactingRanges[0].Partial && !para.CanDeletePartial(
+                para.LocalInfo.OffsetToThis(delInfo), out var rq1
+            ))
+            {
+                isFailed = true;
+                para.LocalInfo.OffsetFromThis(ref rq1);
+                range = range.Normalized;
+                range.Start = Math.Min(range.Start, rq1.Minimum);
+                range.End = Math.Max(range.End, rq1.Maximum);
+            }
+            para = interactingRanges[^1].Paragraph;
+            if (interactingRanges[^1].Partial && !para.CanDeletePartial(
+                para.LocalInfo.OffsetToThis(delInfo), out var rq2
+            ))
+            {
+                isFailed = true;
+                para.LocalInfo.OffsetFromThis(ref rq2);
+                range = range.Normalized;
+                range.Start = Math.Min(range.Start, rq2.Minimum);
+                range.End = Math.Max(range.End, rq2.Maximum);
+            }
+            // Check backspace deletion
+            {
+                var idx = interactingRanges[^1].Index;
+                para = interactingRanges[^1].Paragraph;
+                newRange = para.LocalInfo.OffsetToThis(range);
+                if (newRange.Minimum <= 0 && delInfo.DeleteMode is DeleteModes.Backward)
+                {
+                    Debug.Assert(idx >= 1);
+                    if (!Children[idx].CanJoinWith(Children[idx - 1]))
+                    {
+                        requestedSelection = new TextRange(Children[idx + 1].LocalInfo.CodePointIndex,
+                            Children[idx + 1].LocalInfo.CodePointIndex + Children[idx + 1].CodePointLength,
+                            altPosition: true
+                        );
+                        return false;
+                    }
+                }
+                // if at the end of this paragraph, and delete forward
+                idx = interactingRanges[0].Index;
+                para = interactingRanges[0].Paragraph;
+                newRange = para.LocalInfo.OffsetToThis(range);
+                if (newRange.Minimum + 1 >= para.CodePointLength && delInfo.DeleteMode is DeleteModes.Forward)
+                {
+                    Debug.Assert(paraIdx >= 1);
+                    if (!Children[idx - 1].CanJoinWith(Children[idx]))
+                    {
+                        requestedSelection = new TextRange(Children[idx + 1].LocalInfo.CodePointIndex,
+                            Children[idx + 1].LocalInfo.CodePointIndex + Children[idx + 1].CodePointLength,
+                            altPosition: true
+                        );
+                        return false;
+                    }
+                }
+            }
+            if (isFailed)
+            {
+                requestedSelection = range;
+                return false;
+            }
+            // If not actually deleting, no need to do anytihng else
+            if (doDelete)
+            {
+                requestedSelection = range;
+                return true;
+            }
+            para = interactingRanges[0].Paragraph;
+            if (interactingRanges[0].Partial)
+                interactingRanges[0].Paragraph.DeletePartial(para.LocalInfo.OffsetToThis(delInfo), out _, UndoManager);
+            foreach (var idx in
+                from i in (1..^1).Iterate(length: interactingRanges.Length, step: -1)
+                select interactingRanges[i].Index
+            ) UndoManager.Do(new UndoDeleteParagraph(this, idx));
+            // interactingRange at index 1 and above is no longer valid. Use with caution
+            var firstIdx = interactingRanges[0].Index;
+            if (!interactingRanges[0].Partial)
+                // It's the same
+                UndoManager.Do(new UndoDeleteParagraph(this, interactingRanges[0].Index));
+            if (interactingRanges.Length > 1)
+            {
+                // Previous Index ^1 is now at index IR[0] + 1
+                if (interactingRanges[^1].Partial)
+                {
+                    para = Children[interactingRanges[0].Index + 1];
+                    para.ParentInfo = para.ParentInfo with { Index = interactingRanges[0].Index + 1 };
+                    para.DeletePartial(
+                        para.LocalInfo.OffsetToThis(delInfo),
+                        out _,
+                        UndoManager
+                    );
+                }
+                else
+                {
+                    UndoManager.Do(new UndoDeleteParagraph(this, interactingRanges[0].Index + 1));
+                }
+            }
+            if (
+                // Join with next paragraph if delete the end of the paragraph
+                interactingRanges[0].Partial && interactingRanges[0].Offset + interactingRanges[0].Length
+                >= interactingRanges[0].Paragraph.CodePointLength
+            )
+                if (!Children[firstIdx].TryJoin(UndoManager, firstIdx))
+                    EnsureParagraphEnding(Children[firstIdx], UndoManager);
+            requestedSelection = new(range.Minimum);
+            return true;
+        }
+    }
+    public override bool DeletePartial(DeleteInfo delInfo, out TextRange requestedSelection, UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
+    {
+        return DeletePartialImplement(true, delInfo, out requestedSelection, UndoManager);
+    }
+    public override bool CanDeletePartial(DeleteInfo deleteInfo, out TextRange requestedSelection)
+    {
+        return DeletePartialImplement(false, deleteInfo, out requestedSelection, null);
     }
 }

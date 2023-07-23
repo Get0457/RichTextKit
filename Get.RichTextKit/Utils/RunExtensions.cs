@@ -124,8 +124,9 @@ namespace Get.RichTextKit.Utils
                 yield return sr;
             }
         }
-        public static IEnumerable<SubRun> LocalGetInterectingRuns(this IReadOnlyList<Paragraph> list, int offset, int length)
+        public static IEnumerable<SubRun> LocalGetInterectingRuns(this IReadOnlyList<Paragraph> list, TextRange range)
         {
+            int offset = range.Minimum, length = Math.Abs(range.Length);
             // Check list is consistent
             //list.CheckValid(); won't work because paragraphs do have local/global index
 

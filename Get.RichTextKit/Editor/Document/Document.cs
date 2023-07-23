@@ -45,6 +45,7 @@ public partial class Document
         // Create our undo manager
         UndoManager = new UndoManager<Document, DocumentViewUpdateInfo>(this);
         UndoManager.EndOperation += FireDocumentChanged;
+        Layout.Invalidate();
     }
 
     /// <summary>
@@ -85,6 +86,7 @@ public partial class Document
     /// <returns>The text as a Utf32Buffer</returns>
     public Utf32Buffer GetText(TextRange range)
     {
+        Layout.EnsureValid();
         // Normalize and clamp range
         range = range.Normalized.Clamp(Layout.Length - 1);
 

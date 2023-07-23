@@ -101,36 +101,51 @@ public abstract class Paragraph : IRun, IParentOrParagraph
     /// <returns>A HitTestResult</returns>
     public abstract HitTestResult HitTestLine(int lineIndex, float x);
 
-    public virtual SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection) => new(
+    public virtual SelectionInfo GetSelectionInfo(TextRange selection) => new(
         selection, null, GetCaretInfo(selection.StartCaretPosition), GetCaretInfo(selection.EndCaretPosition),
         this,
-        GetInteractingRuns(parentInfo, selection),
-        GetInteractingRunsRecursive(parentInfo, selection),
-        GetBFSInteractingRuns(parentInfo, selection)
+        GetInteractingRuns(selection),
+        GetInteractingRunsRecursive(selection),
+        GetBFSInteractingRuns(selection)
     );
     // So protected members can access the method
-    protected static IEnumerable<SubRunInfo> GetInteractingRuns(Paragraph para, ParentInfo parentInfo, TextRange selection)
-        => para.GetInteractingRuns(parentInfo, selection);
-    protected virtual IEnumerable<SubRunInfo> GetInteractingRuns(ParentInfo parentInfo, TextRange selection)
+    protected static IEnumerable<SubRunInfo> GetInteractingRuns(Paragraph para, TextRange selection)
+        => para.GetInteractingRuns(selection);
+    protected ParentInfo VirtualizedParentInfo
+    {
+        get
+        {
+
+            var parentInfo = ParentInfo;
+            if (parentInfo.Parent is null)
+            {
+                if (this is not IParagraphCollection paragraphCollection)
+                    throw new InvalidOperationException("The root paragraph must be a panel");
+                parentInfo = new(paragraphCollection, 0);
+            }
+            return parentInfo;
+        }
+    }
+    protected virtual IEnumerable<SubRunInfo> GetInteractingRuns(TextRange selection)
     {
         yield return new(
-            parentInfo, selection.Minimum, Math.Abs(selection.Length),
+            VirtualizedParentInfo, selection.Minimum, Math.Abs(selection.Length),
             !(selection.Minimum <= 0 && selection.Maximum >= CodePointLength)
         );
     }
-    protected static IEnumerable<SubRunInfo> GetInteractingRunsRecursive(Paragraph para, ParentInfo parentInfo, TextRange selection)
-        => para.GetInteractingRunsRecursive(parentInfo, selection);
-    protected virtual IEnumerable<SubRunInfo> GetInteractingRunsRecursive(ParentInfo parentInfo, TextRange selection)
-        => GetInteractingRuns(parentInfo, selection);
-    public IEnumerable<SubRunBFSInfo> GetBFSInteractingRuns(ParentInfo parentInfo, TextRange selection)
+    protected static IEnumerable<SubRunInfo> GetInteractingRunsRecursive(Paragraph para, TextRange selection)
+        => para.GetInteractingRunsRecursive(selection);
+    protected virtual IEnumerable<SubRunInfo> GetInteractingRunsRecursive(TextRange selection)
+        => GetInteractingRuns(selection);
+    public IEnumerable<SubRunBFSInfo> GetBFSInteractingRuns(TextRange selection)
     {
-        foreach (var subRun in GetInteractingRuns(parentInfo, selection))
+        foreach (var subRun in GetInteractingRuns(selection))
         {
             // We can do this because IEnumerable is lazy so the function will actually not evaluate here
             var childEnumerable =
                 subRun.Paragraph == this ? Enumerable.Empty<SubRunBFSInfo>() :
                 subRun.Paragraph.GetBFSInteractingRuns(
-                    subRun.ParentInfo, new(subRun.Offset, subRun.Offset + subRun.Length)
+                    new(subRun.Offset, subRun.Offset + subRun.Length)
                 );
             if (subRun.Partial)
             {
@@ -256,12 +271,66 @@ public abstract class Paragraph : IRun, IParentOrParagraph
         public void OffsetFromThis(ref LineInfo info)
         {
             info.Line += LineIndex;
-            info.Start = new(info.Start.CodePointIndex + CodePointIndex, info.Start.AltPosition);
-            info.End = new(info.End.CodePointIndex + CodePointIndex, info.End.AltPosition);
+            info.Start = OffsetFromThis(info.Start);
+            info.End = OffsetFromThis(info.End);
             if (info.NextLine is not null)
                 info.NextLine += LineIndex;
             if (info.PrevLine is not null)
                 info.PrevLine += LineIndex;
+        }
+        public CaretPosition OffsetFromThis(CaretPosition caretPosition)
+        {
+            OffsetFromThis(ref caretPosition);
+            return caretPosition;
+        }
+        public void OffsetFromThis(ref CaretPosition caretPosition)
+        {
+            caretPosition = new(caretPosition.CodePointIndex + CodePointIndex, caretPosition.AltPosition);
+        }
+        public CaretPosition OffsetToThis(CaretPosition caretPosition)
+        {
+            OffsetToThis(ref caretPosition);
+            return caretPosition;
+        }
+        public void OffsetToThis(ref CaretPosition caretPosition)
+        {
+            caretPosition = new(caretPosition.CodePointIndex - CodePointIndex, caretPosition.AltPosition);
+        }
+        public TextRange OffsetFromThis(TextRange textRange)
+        {
+            OffsetFromThis(ref textRange);
+            return textRange;
+        }
+        public void OffsetFromThis(ref TextRange textRange)
+        {
+            textRange = new(textRange.Start + CodePointIndex, textRange.End + CodePointIndex, textRange.AltPosition);
+        }
+        public void OffsetToThis(ref TextRange textRange)
+        {
+            textRange = new(textRange.Start - CodePointIndex, textRange.End - CodePointIndex, textRange.AltPosition);
+        }
+        public TextRange OffsetToThis(TextRange textRange)
+        {
+            OffsetToThis(ref textRange);
+            return textRange;
+        }
+        public DeleteInfo OffsetFromThis(DeleteInfo info)
+        {
+            OffsetFromThis(ref info);
+            return info;
+        }
+        public void OffsetFromThis(ref DeleteInfo info)
+        {
+            info = info with { Range = OffsetFromThis(info.Range) };
+        }
+        public void OffsetToThis(ref DeleteInfo info)
+        {
+            info = info with { Range = OffsetToThis(info.Range) };
+        }
+        public DeleteInfo OffsetToThis(DeleteInfo info)
+        {
+            OffsetToThis(ref info);
+            return info;
         }
         public void OffsetToThis(ref PointF pt)
         {
@@ -307,17 +376,22 @@ public abstract class Paragraph : IRun, IParentOrParagraph
     /// The margin
     /// </summary>
     public Thickness Margin { get; internal set; }
+    public ParentInfo ParentInfo { get; internal set; }
 
     // Explicit implementation of IRun so we can use RunExtensions
     // with the paragraphs collection.
     int IRun.Offset => GlobalInfo.CodePointIndex;
     int IRun.Length => CodePointLength;
 
-    public abstract void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range);
+    public abstract bool CanDeletePartial(DeleteInfo deleteInfo, out TextRange requestedSelection);
+    public abstract bool DeletePartial(DeleteInfo deleteInfo, out TextRange requestedSelection, UndoManager<Document, DocumentViewUpdateInfo> UndoManager);
     public virtual bool CanJoinWith(Paragraph other) { return false; }
     public virtual bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex) { return false; }
     public abstract Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex);
     public abstract void GetTextByAppendTextToBuffer(Utf32Buffer buffer, int position, int length);
+    protected static void EnsureParagraphEnding(Paragraph p, UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
+        => p.EnsureParagraphEnding(UndoManager);
+    protected virtual void EnsureParagraphEnding(UndoManager<Document, DocumentViewUpdateInfo> UndoManager) { }
     public Utf32Buffer GetText(int position, int length)
     {
         var buf = new Utf32Buffer();
@@ -335,6 +409,24 @@ public abstract class Paragraph : IRun, IParentOrParagraph
     protected internal Document? Owner { get; private set; }
     protected internal virtual void OnParagraphAdded(Document owner) { Owner = owner; }
     protected internal virtual void OnParagraphRemoved(Document owner) { Owner = null; }
+    public ParagraphIndex GlobalParagraphIndex => new(GetParaIndex(null).ToArray());
+    IEnumerable<int> GetParaIndex(IParagraphCollection? stopAtParent)
+    {
+        var parentInfo = ParentInfo;
+        if (parentInfo.Parent is not Paragraph paragraph || paragraph == stopAtParent)
+        {
+            yield break;
+        } else
+        {
+            foreach (var a in paragraph.GetParaIndex(stopAtParent))
+                yield return a;
+            yield return parentInfo.Index;
+        }
+    }
+}
+public record struct ParagraphIndex(int[] RecursiveIndexArray)
+{
+    
 }
 public record struct StyleRunEx(int Start, int Length, IStyle Style) : IRun
 {
