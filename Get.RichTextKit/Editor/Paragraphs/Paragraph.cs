@@ -54,15 +54,13 @@ public enum NavigationDirection : byte
 /// </summary>
 public abstract partial class Paragraph : IRun, IParentOrParagraph
 {
-    public abstract IStyle StartStyle { get; }
-    public abstract IStyle EndStyle { get; }
     /// <summary>
     /// Constructs a new Paragraph
     /// </summary>
-    protected Paragraph()
-    {
-
-    }
+    protected Paragraph() { }
+    public abstract IStyle StartStyle { get; }
+    public abstract IStyle EndStyle { get; }
+    
     /// <inheritdoc cref="Layout(LayoutParentInfo)"/>
     protected abstract void LayoutOverride(LayoutParentInfo owner);
     /// <summary>
@@ -71,66 +69,10 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     /// <param name="owner">The TextDocument that owns this paragraph</param>
     public void Layout(LayoutParentInfo owner)
         => LayoutOverride(owner with { AvaliableWidth = owner.AvaliableWidth - Margin.Left - Margin.Right });
-    /// <summary>
-    /// Calculate the selection range from the navigation
-    /// </summary>
-    /// <param name="selection">The current selection</param>
-    /// <param name="snap">The place to snap the new selection</param>
-    /// <param name="direction">The direction to navigate</param>
-    /// <param name="keepSelection">Whether to keep the selection</param>
-    /// <param name="ghostXCoord">The ghost X Coordinate for up/down navigation</param>
-    /// <param name="newSelection">The new selection; The value is only valid if the function reports success</param>
-    /// <returns>The navigation status</returns>
-    /// <remarks>
-    /// newSelection is only valid if the navigation status is successful
-    /// </remarks>
-    public NavigationStatus Navigate(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection)
-    {
-        return NavigateOverride(selection, snap, direction, keepSelection, ref ghostXCoord, out newSelection);
-    }
+
     public virtual CaretPosition StartCaretPosition => new(0, altPosition: false);
     public virtual CaretPosition EndCaretPosition => new(Math.Max(0, CodePointLength - 2), altPosition: false);
-    protected abstract NavigationStatus NavigateOverride(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection);
-    protected NavigationStatus VerticalNavigateUsingLineInfo(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection)
-    {
-        if (direction is not (NavigationDirection.Up or NavigationDirection.Down))
-        {
-            throw new ArgumentOutOfRangeException(nameof(direction));
-        }
-
-        // Get the line number the caret is on
-        var ci = GetCaretInfo(new CaretPosition(selection.End, selection.AltPosition));
-
-        // Resolve the xcoord
-        ghostXCoord ??= ci.CaretXCoord + GlobalInfo.ContentPosition.X;
-
-        // Work out which line to hit test
-        var lineInfo = GetLineInfo(ci.LineIndex);
-        var toLine = direction is NavigationDirection.Down ? lineInfo.NextLine : lineInfo.PrevLine;
-
-        // Exceed paragraph?
-        if (toLine is null)
-        {
-            newSelection = default;
-            if (direction is NavigationDirection.Up)
-                return NavigationStatus.MoveBefore;
-            else
-                return NavigationStatus.MoveAfter;
-        }
-
-
-        // Hit test the line
-        var htr = HitTestLine(toLine.Value, ghostXCoord.Value - GlobalInfo.ContentPosition.X);
-        selection.EndCaretPosition = new CaretPosition(htr.ClosestCodePointIndex, htr.AltCaretPosition);
-        if (!keepSelection)
-            selection.Start = selection.End;
-        newSelection = selection;
-        return NavigationStatus.Success;
-    }
-    public record struct PaintOptions(RectangleF ViewBounds, TextPaintOptions TextPaintOptions, IDocumentViewOwner? viewOwner)
-    {
-        
-    }
+    public record struct PaintOptions(RectangleF ViewBounds, TextPaintOptions TextPaintOptions, IDocumentViewOwner? viewOwner);
     /// <summary>
     /// Paint this paragraph
     /// </summary>
@@ -138,53 +80,6 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     /// <param name="options">Paint options</param>
     public abstract void Paint(SKCanvas canvas, PaintOptions options);
 
-    /// <summary>
-    /// Get caret position information
-    /// </summary>
-    /// <remarks>
-    /// The returned caret info should be relative to the paragraph's content
-    /// </remarks>
-    /// <param name="position">The caret position</param>
-    /// <returns>A CaretInfo struct, or CaretInfo.None</returns>
-    public abstract CaretInfo GetCaretInfo(CaretPosition position);
-
-    /// <summary>
-    /// Get line position information
-    /// </summary>
-    /// <remarks>
-    /// The returned caret info should be relative to the paragraph's content
-    /// </remarks>
-    /// <param name="line">The line number</param>
-    /// <returns>A LineInfo struct</returns>
-    public abstract LineInfo GetLineInfo(int line);
-    internal LineInfo GetLineInfo(Index idx) => GetLineInfo(idx.GetOffset(LineCount));
-    public LineInfo GetLineInfo(int idx, bool fromEnd) => GetLineInfo(new Index(idx, fromEnd));
-
-    /// <summary>
-    /// Hit test this paragraph
-    /// </summary>
-    /// <param name="pt">The coordinate relative to top left of the paragraph content</param>
-    /// <returns>A HitTestResult</returns>
-    public abstract HitTestResult HitTest(PointF pt);
-
-    /// <summary>
-    /// Hit test a line in this paragraph
-    /// </summary>
-    /// <remarks>
-    /// The number of lines can be determined from LineIndicies.Count.
-    /// </remarks>
-    /// <param name="lineIndex">The line number to be tested</param>
-    /// <param name="x">The x-coordinate relative to left of the paragraph content</param>
-    /// <returns>A HitTestResult</returns>
-    public abstract HitTestResult HitTestLine(int lineIndex, float x);
-
-    public virtual SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection) => new(
-        selection, null, GetCaretInfo(selection.StartCaretPosition), GetCaretInfo(selection.EndCaretPosition),
-        this,
-        GetInteractingRuns(parentInfo, selection),
-        GetInteractingRunsRecursive(parentInfo, selection),
-        GetBFSInteractingRuns(parentInfo, selection)
-    );
     // So protected members can access the method
     protected static IEnumerable<SubRunInfo> GetInteractingRuns(Paragraph para, ParentInfo parentInfo, TextRange selection)
         => para.GetInteractingRuns(parentInfo, selection);
@@ -213,13 +108,13 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
             {
                 foreach (var sr2 in childEnumerable)
                     yield return sr2;
-            } else
+            }
+            else
             {
                 yield return new SubRunBFSInfo(subRun, childEnumerable);
             }
         }
     }
-    public abstract TextRange GetSelectionRange(CaretPosition position, ParagraphSelectionKind kind);
 
     /// <summary>
     /// Gets the length of this paragraph in code points
@@ -272,7 +167,7 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     /// This property is calculated and assigned by the TextDocument
     /// </remarks>
     protected internal PointF DrawingContentPosition { get; internal set; }
-    
+
     /// <summary>
     /// The margin
     /// </summary>
