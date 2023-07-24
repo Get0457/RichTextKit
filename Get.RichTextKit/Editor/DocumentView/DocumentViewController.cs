@@ -75,7 +75,8 @@ public partial class DocumentViewController
                 MoveCaret(new(selection.Minimum));
             else
                 MoveCaret(new(selection.Minimum - 1));
-        } else
+        }
+        else
         {
             if (status.FailToDeleteParent is Paragraph p)
             {
@@ -114,36 +115,25 @@ public partial class DocumentViewController
                 // TODO: Make this like other text editor engine.
             }
         }
-        var newPos = DocumentView.OwnerDocument.Editor.Navigate(
-            originalRange.EndCaretPosition,
-            wholeWord ?
-                direction switch
-                {
-                    Direction.Left => NavigationKind.WordLeft,
-                    Direction.Right => NavigationKind.WordRight,
-                    // doesn't really matter
-                    Direction.Up => NavigationKind.LineUp,
-                    Direction.Down => NavigationKind.LineDown,
-                    _ => throw new ArgumentOutOfRangeException(nameof(direction))
-                } : direction switch
-                {
-                    Direction.Left => NavigationKind.CharacterLeft,
-                    Direction.Right => NavigationKind.CharacterRight,
-                    // doesn't really matter
-                    Direction.Up => NavigationKind.LineUp,
-                    Direction.Down => NavigationKind.LineDown,
-                    _ => throw new ArgumentOutOfRangeException(nameof(direction))
-                },
-            DocumentView.ViewHeight,
-            ref _ghostXCoordinate
-        );
-        if (selectionMode)
+        if (direction is Direction.Left or Direction.Right)
         {
-            DocumentView.Selection.Range = new(originalRange.Start, newPos.CodePointIndex);
+            DocumentView.Selection.Range = DocumentView.OwnerDocument.Editor.Navigate(
+                originalRange,
+                wholeWord ? Paragraphs.NavigationSnap.Word : Paragraphs.NavigationSnap.Character,
+                direction is Direction.Left ? Paragraphs.NavigationDirection.Backward : Paragraphs.NavigationDirection.Forward,
+                selectionMode,
+                ref _ghostXCoordinate
+            );
         }
         else
         {
-            DocumentView.Selection.Range = new(newPos);
+            DocumentView.Selection.Range = DocumentView.OwnerDocument.Editor.Navigate(
+                originalRange,
+                wholeWord ? Paragraphs.NavigationSnap.Word : Paragraphs.NavigationSnap.Character,
+                direction is Direction.Down ? Paragraphs.NavigationDirection.Down : Paragraphs.NavigationDirection.Up,
+                selectionMode,
+                ref _ghostXCoordinate
+            );
         }
     }
     public void MoveCaret(SpacialCaretMovement mode, bool selectionMode = false)

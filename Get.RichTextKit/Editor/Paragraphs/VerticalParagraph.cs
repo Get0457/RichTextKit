@@ -9,9 +9,10 @@ using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
 using Get.EasyCSharp;
 using Get.RichTextKit.Editor.DocumentView;
+using System.Diagnostics;
 
 namespace Get.RichTextKit.Editor.Paragraphs.Panel;
-
+[DebuggerDisplay("Vertical {Children.Count} ({string.Join(\", \", Children)})")]
 public partial class VerticalParagraph : PanelParagraph
 {
     [Property(OnChanged = nameof(InvokeLayoutChanged))]

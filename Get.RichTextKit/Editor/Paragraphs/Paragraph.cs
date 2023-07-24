@@ -26,11 +26,33 @@ using Get.RichTextKit.Styles;
 using Get.RichTextKit.Editor.Paragraphs.Panel;
 
 namespace Get.RichTextKit.Editor.Paragraphs;
-
+public enum NavigationStatus
+{
+    Success,
+    MoveBefore,
+    MoveAfter
+}
+public enum NavigationSnap
+{
+    Character,
+    Word
+}
+public enum ParagraphSelectionKind
+{
+    None,
+    Word
+}
+public enum NavigationDirection : byte
+{
+    Backward = default,
+    Forward = 1,
+    Down = 2,
+    Up = 3
+}
 /// <summary>
 /// Abstract base class for all TextDocument paragraphs
 /// </summary>
-public abstract class Paragraph : IRun, IParentOrParagraph
+public abstract partial class Paragraph : IRun, IParentOrParagraph
 {
     public abstract IStyle StartStyle { get; }
     public abstract IStyle EndStyle { get; }
@@ -49,7 +71,62 @@ public abstract class Paragraph : IRun, IParentOrParagraph
     /// <param name="owner">The TextDocument that owns this paragraph</param>
     public void Layout(LayoutParentInfo owner)
         => LayoutOverride(owner with { AvaliableWidth = owner.AvaliableWidth - Margin.Left - Margin.Right });
+    /// <summary>
+    /// Calculate the selection range from the navigation
+    /// </summary>
+    /// <param name="selection">The current selection</param>
+    /// <param name="snap">The place to snap the new selection</param>
+    /// <param name="direction">The direction to navigate</param>
+    /// <param name="keepSelection">Whether to keep the selection</param>
+    /// <param name="ghostXCoord">The ghost X Coordinate for up/down navigation</param>
+    /// <param name="newSelection">The new selection; The value is only valid if the function reports success</param>
+    /// <returns>The navigation status</returns>
+    /// <remarks>
+    /// newSelection is only valid if the navigation status is successful
+    /// </remarks>
+    public NavigationStatus Navigate(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection)
+    {
+        return NavigateOverride(selection, snap, direction, keepSelection, ref ghostXCoord, out newSelection);
+    }
+    public virtual CaretPosition StartCaretPosition => new(0, altPosition: false);
+    public virtual CaretPosition EndCaretPosition => new(Math.Max(0, CodePointLength - 2), altPosition: false);
+    protected abstract NavigationStatus NavigateOverride(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection);
+    protected NavigationStatus VerticalNavigateUsingLineInfo(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection)
+    {
+        if (direction is not (NavigationDirection.Up or NavigationDirection.Down))
+        {
+            throw new ArgumentOutOfRangeException(nameof(direction));
+        }
 
+        // Get the line number the caret is on
+        var ci = GetCaretInfo(new CaretPosition(selection.End, selection.AltPosition));
+
+        // Resolve the xcoord
+        ghostXCoord ??= ci.CaretXCoord + GlobalInfo.ContentPosition.X;
+
+        // Work out which line to hit test
+        var lineInfo = GetLineInfo(ci.LineIndex);
+        var toLine = direction is NavigationDirection.Down ? lineInfo.NextLine : lineInfo.PrevLine;
+
+        // Exceed paragraph?
+        if (toLine is null)
+        {
+            newSelection = default;
+            if (direction is NavigationDirection.Up)
+                return NavigationStatus.MoveBefore;
+            else
+                return NavigationStatus.MoveAfter;
+        }
+
+
+        // Hit test the line
+        var htr = HitTestLine(toLine.Value, ghostXCoord.Value - GlobalInfo.ContentPosition.X);
+        selection.EndCaretPosition = new CaretPosition(htr.ClosestCodePointIndex, htr.AltCaretPosition);
+        if (!keepSelection)
+            selection.Start = selection.End;
+        newSelection = selection;
+        return NavigationStatus.Success;
+    }
     public record struct PaintOptions(RectangleF ViewBounds, TextPaintOptions TextPaintOptions, IDocumentViewOwner? viewOwner)
     {
         
@@ -142,15 +219,7 @@ public abstract class Paragraph : IRun, IParentOrParagraph
             }
         }
     }
-    /// <summary>
-    /// Retrieves a list of all valid caret positions
-    /// </summary>
-    public abstract IReadOnlyList<int> CaretIndicies { get; }
-
-    /// <summary>
-    /// Retrieves a list of all valid word boundary caret positions
-    /// </summary>
-    public abstract IReadOnlyList<int> WordBoundaryIndicies { get; }
+    public abstract TextRange GetSelectionRange(CaretPosition position, ParagraphSelectionKind kind);
 
     /// <summary>
     /// Gets the length of this paragraph in code points
@@ -193,105 +262,6 @@ public abstract class Paragraph : IRun, IParentOrParagraph
     /// Queries the width of this paragraph
     /// </summary>
     public float ContentWidth => ContentWidthOverride + Margin.Left + Margin.Right;
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="ContentPosition">
-    /// The coordinate of this paragraph's content
-    /// </param>
-    /// <param name="CodePointIndex">
-    /// This code point index of this paragraph relative to the start
-    /// </param>
-    /// <param name="LineIndex">
-    /// This line index of this paragraph relative to the start
-    /// </param>
-    /// <param name="DisplayLineIndex"></param>
-    protected internal readonly record struct LayoutInfo
-    (PointF ContentPosition, int CodePointIndex, int LineIndex, int DisplayLineIndex)
-    {
-        public LayoutInfo OffsetToGlobal(LayoutInfo parentGlobalInfo)
-            => new(
-                new(
-                    ContentPosition.X + parentGlobalInfo.ContentPosition.X,
-                    ContentPosition.Y + parentGlobalInfo.ContentPosition.Y
-                ),
-                CodePointIndex + parentGlobalInfo.CodePointIndex,
-                LineIndex + parentGlobalInfo.LineIndex,
-                DisplayLineIndex + parentGlobalInfo.DisplayLineIndex
-            );
-        public void OffsetFromThis(ref CaretInfo ci)
-        {
-            ci.CodePointIndex += CodePointIndex;
-            ci.CaretXCoord += ContentPosition.X;
-            ci.CaretRectangle.Offset(new SKPoint(ContentPosition.X, ContentPosition.Y));
-            ci.LineIndex += LineIndex;
-        }
-        public CaretInfo OffsetFromThis(CaretInfo ci)
-        {
-            OffsetFromThis(ref ci);
-            return ci;
-        }
-        public HitTestResult OffsetFromThis(HitTestResult htr)
-        {
-            OffsetFromThis(ref htr);
-            return htr;
-        }
-        public void OffsetFromThis(ref HitTestResult htr)
-        {
-
-            if (htr.ClosestLine is not -1)
-                htr.ClosestLine += LineIndex;
-            if (htr.OverLine is not -1)
-                htr.OverLine += LineIndex;
-            if (htr.ClosestCodePointIndex is not -1)
-                htr.ClosestCodePointIndex += CodePointIndex;
-            if (htr.OverCodePointIndex is not -1)
-                htr.OverCodePointIndex += CodePointIndex;
-        }
-        public LineInfo OffsetFromThis(LineInfo info)
-        {
-            OffsetFromThis(ref info);
-            return info;
-        }
-        public void OffsetFromThis(ref LineInfo info)
-        {
-            info.Line += LineIndex;
-            info.Start = new(info.Start.CodePointIndex + CodePointIndex, info.Start.AltPosition);
-            info.End = new(info.End.CodePointIndex + CodePointIndex, info.End.AltPosition);
-            if (info.NextLine is not null)
-                info.NextLine += LineIndex;
-            if (info.PrevLine is not null)
-                info.PrevLine += LineIndex;
-        }
-        public void OffsetToThis(ref PointF pt)
-        {
-            pt.X -= ContentPosition.X;
-            pt.Y -= ContentPosition.Y;
-        }
-        public PointF OffsetToThis(PointF pt)
-        {
-            OffsetToThis(ref pt);
-            return pt;
-        }
-        public void OffsetXToThis(ref float x)
-        {
-            x -= ContentPosition.X;
-        }
-        public float OffsetXToThis(float x)
-        {
-            OffsetXToThis(ref x);
-            return x;
-        }
-        public void OffsetYToThis(ref float y)
-        {
-            y -= ContentPosition.Y;
-        }
-        public float OffsetYToThis(float y)
-        {
-            OffsetYToThis(ref y);
-            return y;
-        }
-    }
     protected internal LayoutInfo GlobalInfo { get; internal set; }
     protected internal LayoutInfo LocalInfo { get; internal set; }
 

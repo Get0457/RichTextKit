@@ -7,6 +7,7 @@ using Get.EasyCSharp;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Styles;
 using Get.RichTextKit.Editor.Paragraphs.Panel;
+using Get.RichTextKit.Editor.Structs;
 
 namespace Get.RichTextKit.Editor.DocumentView;
 
@@ -23,7 +24,6 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     }
     [AutoEventProperty(OnChanged = nameof(OnRangeChanged))]
     TextRange _Range;
-
     public CaretInfo StartCaretInfo { get; private set; }
     public CaretInfo EndCaretInfo { get; private set; }
     /// <summary>
@@ -55,15 +55,20 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
                 // no I do not want cursor at the end
                 _Range = new(_Range.Start - 1);
             }
+            UpdateCaretInfo();
         }
         else
         {
             CurrentPositionStyle = null;
             CurrentCaretPositionParent = null;
+            var selectInfo = DocumentView.OwnerDocument.Editor.GetSelectionInfo(Range);
+            DocumentView.LayoutInfo.OffsetToThis(ref selectInfo);
+            _Range = selectInfo.FinalSelection;
+            StartCaretInfo = selectInfo.StartCaretInfo;
+            EndCaretInfo = selectInfo.EndCaretInfo;
         }
         //var start = DocumentView.Controller.HitTest(new(0, 0));
         //var end = DocumentView.Controller.HitTest(new(0, DocumentView.ViewHeight));
-        UpdateCaretInfo();
         bool change = true;
         if (EndCaretInfo.CaretRectangle.Top < 0)
             DocumentView.YScroll += EndCaretInfo.CaretRectangle.Top;
@@ -86,8 +91,17 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     }
     void UpdateCaretInfo()
     {
-        StartCaretInfo = DocumentView.Controller.GetCaretInfo(Range.StartCaretPosition);
-        EndCaretInfo = DocumentView.Controller.GetCaretInfo(Range.EndCaretPosition);
+        if (Range.IsRange)
+        {
+            var selectInfo = DocumentView.OwnerDocument.Editor.GetSelectionInfo(Range);
+            DocumentView.LayoutInfo.OffsetToThis(ref selectInfo);
+            StartCaretInfo = selectInfo.StartCaretInfo;
+            EndCaretInfo = selectInfo.EndCaretInfo;
+        } else
+        {
+            StartCaretInfo = EndCaretInfo = DocumentView.Controller.GetCaretInfo(Range.EndCaretPosition);
+        }
+
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     protected override void OnChanged(string FormatName)

@@ -26,12 +26,14 @@ using Get.RichTextKit;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
 using Get.RichTextKit.Editor.DocumentView;
+using System.Diagnostics;
 
 namespace Get.RichTextKit.Editor.Paragraphs;
 
 /// <summary>
 /// Implements a text paragraph
 /// </summary>
+[DebuggerDisplay("{TextBlock}")]
 public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
 {
     const int NumberLineOffset = 60;
@@ -145,12 +147,6 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     public override HitTestResult HitTestLine(int lineIndex, float x) => _textBlock.HitTestLine(lineIndex, LineNumberMode ? Math.Max(0, x - NumberLineOffset) : x);
 
     /// <inheritdoc />
-    public override IReadOnlyList<int> CaretIndicies => _textBlock.CaretIndicies;
-
-    /// <inheritdoc />
-    public override IReadOnlyList<int> WordBoundaryIndicies => _textBlock.WordBoundaryIndicies;
-
-    /// <inheritdoc />
     public override int CodePointLength => _textBlock.Length;
 
     /// <inheritdoc />
@@ -222,4 +218,86 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     {
         TextBlock.ApplyStyle(position, length, style);
     }
+    protected override NavigationStatus NavigateOverride(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection)
+    {
+        if (direction is NavigationDirection.Up or NavigationDirection.Down)
+        {
+            return VerticalNavigateUsingLineInfo(selection, snap, direction, keepSelection, ref ghostXCoord, out newSelection);
+        }
+        ghostXCoord = null;
+        if (!keepSelection && selection.IsRange)
+        {
+            newSelection = direction is NavigationDirection.Backward ? new(selection.MinimumCaretPosition) : new(selection.MaximumCaretPosition);
+            return NavigationStatus.Success;
+        }
+        newSelection = selection;
+        var indicies = snap switch
+        {
+            NavigationSnap.Character => TextBlock.CaretIndicies,
+            NavigationSnap.Word => TextBlock.WordBoundaryIndicies,
+            _ => throw new ArgumentOutOfRangeException(nameof(snap))
+        };
+
+        var ii = indicies.BinarySearch(selection.End);
+
+        // Work out the new position
+        if (ii < 0)
+        {
+            ii = (~ii);
+            if (direction is NavigationDirection.Forward)
+                ii--;
+        }
+        ii += direction is NavigationDirection.Forward ? 1 : -1;
+
+
+        if (ii < 0)
+        {
+            // Move to end of previous paragraph
+            return NavigationStatus.MoveBefore;
+        }
+
+        if (ii >= indicies.Count)
+        {
+            // Move to start of next paragraph
+            return NavigationStatus.MoveAfter;
+        }
+
+        // Move to new position in this paragraph
+        selection.End = indicies[ii];
+        if (!keepSelection) selection.Start = selection.End;
+        newSelection = selection;
+        return NavigationStatus.Success;
+    }
+    public override TextRange GetSelectionRange(CaretPosition position, ParagraphSelectionKind kind)
+    {
+        if (kind is ParagraphSelectionKind.Word)
+        {
+            var indicies = TextBlock.WordBoundaryIndicies;
+            var ii = indicies.BinarySearch(position.CodePointIndex);
+            if (ii < 0)
+                ii = (~ii - 1);
+            if (ii >= indicies.Count)
+                ii = indicies.Count - 1;
+
+            if (ii + 1 >= indicies.Count)
+            {
+                // Point is past end of paragraph
+                return new TextRange(
+                    indicies[ii],
+                    indicies[ii],
+                    true
+                );
+            }
+
+            // Create text range covering the entire word
+            return new TextRange(
+                indicies[ii],
+                indicies[ii + 1],
+                true
+            );
+        }
+        else
+            return new(position);
+    }
+    public override CaretPosition EndCaretPosition => new(TextBlock.Length - 1, false);
 }

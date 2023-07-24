@@ -27,8 +27,6 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     public PanelParagraph(IStyle style)
     {
         Children = new();
-        CaretIndicies = new CaretIndexer(Children, x => x.CaretIndicies);
-        WordBoundaryIndicies = new CaretIndexer(Children, x => x.WordBoundaryIndicies);
     }
 
 
@@ -93,11 +91,6 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         return htr;
     }
 
-    /// <inheritdoc />
-    public override IReadOnlyList<int> CaretIndicies { get; }
-
-    /// <inheritdoc />
-    public override IReadOnlyList<int> WordBoundaryIndicies { get; }
 
     public override LineInfo GetLineInfo(int line)
     {
@@ -113,7 +106,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     }
 
     /// <inheritdoc />
-    public override int CodePointLength => Children.Sum(x => x.CodePointLength);
+    public override int CodePointLength => Children.Sum(x => x.CodePointLength);// + 1;
 
     public override int LineCount => Children.Sum(x => x.LineCount);
 
@@ -183,7 +176,12 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     public override SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection)
     {
         if (IsRangeWithinTheSameChildParagraph(selection, out var paraIndex, out var newRange))
-            return Children[paraIndex].GetSelectionInfo(new(this, paraIndex), newRange);
+        {
+            return
+                Children[paraIndex].LocalInfo.OffsetFromThis(
+                Children[paraIndex].GetSelectionInfo(new(this, paraIndex), newRange)
+            );
+        }
         else
             return base.GetSelectionInfo(parentInfo, selection);
     }
@@ -225,4 +223,73 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         newRange = default;
         return false;
     }
+    public override CaretPosition StartCaretPosition => Children[0].LocalInfo.OffsetFromThis(Children[0].StartCaretPosition);
+    public override CaretPosition EndCaretPosition => Children[^1].LocalInfo.OffsetFromThis(Children[^1].EndCaretPosition);
+    protected override NavigationStatus NavigateOverride(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection)
+    {
+        if (direction is NavigationDirection.Backward or NavigationDirection.Forward)
+            ghostXCoord = null;
+        switch (NavigateOverrideHeadImpl(selection, snap, direction, keepSelection, ref ghostXCoord, out newSelection, out var paraIdx))
+        {
+            case NavigationStatus.Success:
+                return NavigationStatus.Success;
+            case NavigationStatus.MoveAfter:
+                if (paraIdx + 1 < Children.Count)
+                {
+                    if (direction is NavigationDirection.Forward or NavigationDirection.Backward)
+                    {
+                        Children[paraIdx + 1].LocalInfo.OffsetToThis(ref selection);
+                        selection.EndCaretPosition = Children[paraIdx + 1].StartCaretPosition;
+                        if (!keepSelection) selection.Start = selection.End;
+                        Children[paraIdx + 1].LocalInfo.OffsetFromThis(ref selection);
+                        newSelection = selection;
+                    }
+                    else
+                    {
+                        return VerticalNavigateUsingLineInfo(selection, snap, direction, keepSelection, ref ghostXCoord, out newSelection);
+                    }
+                    return NavigationStatus.Success;
+                }
+                return NavigationStatus.MoveAfter;
+            case NavigationStatus.MoveBefore:
+                if (paraIdx - 1 >= 0)
+                {
+                    if (direction is NavigationDirection.Forward or NavigationDirection.Backward)
+                    {
+                        Children[paraIdx - 1].LocalInfo.OffsetToThis(ref selection);
+                        selection.EndCaretPosition = Children[paraIdx - 1].EndCaretPosition;
+                        if (!keepSelection) selection.Start = selection.End;
+                        Children[paraIdx - 1].LocalInfo.OffsetFromThis(ref selection);
+                        newSelection = selection;
+                        return NavigationStatus.Success;
+                    } else
+                    {
+                        return VerticalNavigateUsingLineInfo(selection, snap, direction, keepSelection, ref ghostXCoord, out newSelection);
+                    }
+                }
+                return NavigationStatus.MoveBefore;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+    protected NavigationStatus NavigateOverrideHeadImpl(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection, out int paraIdx)
+    {
+        if (!keepSelection && selection.IsRange)
+        {
+            if (direction is NavigationDirection.Forward or NavigationDirection.Backward)
+            {
+                newSelection = direction is NavigationDirection.Backward ? new(selection.MinimumCaretPosition) : new(selection.MaximumCaretPosition);
+                paraIdx = default;
+                return NavigationStatus.Success;
+            }
+        }
+        paraIdx = LocalChildrenFromCodePointIndexAsIndex(selection.EndCaretPosition, out _);
+        var output = Children[paraIdx].Navigate(Children[paraIdx].LocalInfo.OffsetToThis(selection), snap, direction, keepSelection, ref ghostXCoord, out newSelection);
+        Children[paraIdx].LocalInfo.OffsetFromThis(ref newSelection);
+        return output;
+    }
+    public override TextRange GetSelectionRange(CaretPosition position, ParagraphSelectionKind kind)
+        => LocalChildrenFromCodePointIndex(position, out var idx).GetSelectionRange(
+            new(idx, position.AltPosition), kind
+        );
 }

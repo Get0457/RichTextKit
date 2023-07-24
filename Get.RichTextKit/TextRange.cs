@@ -121,6 +121,8 @@ namespace Get.RichTextKit
                     return this;
             }
         }
+        public readonly bool IsReversed
+            => Start > End;
 
         /// <summary>
         /// Compare this text range to another for equality
@@ -157,6 +159,11 @@ namespace Get.RichTextKit
             get
             {
                 return new CaretPosition(End, AltPosition);
+            }
+            set
+            {
+                End = value.CodePointIndex;
+                AltPosition = value.AltPosition;
             }
         }
 

@@ -9,6 +9,7 @@ namespace Get.RichTextKit.Editor.Paragraphs.Panel;
 [DebuggerDisplay("Table Paragraph ({Rows.Count} Rows x {Columns.Count} Columns)")]
 public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
 {
+    public override bool IsChildrenReadOnly => true;
     public TableRowManager<Paragraph> Rows { get; }
     public TableColumnManager<Paragraph> Columns { get; }
 
@@ -16,46 +17,13 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     {
         get
         {
-            return Children[ResolveIndex(row, col)];
+            return new TableIndex(this, row, col).Paragraph;
         }
         set
         {
-            Children[ResolveIndex(row, col)] = value;
-            Owner?.Layout.Invalidate();
+            new TableIndex(this, row, col).Paragraph = value;
+            InvokeLayoutChanged();
         }
-    }
-    (int row, int col) ResolveIndex(int index)
-    {
-        var row = index / _columnCount;
-        var col = index - row * _columnCount;
-        return (row, col);
-    }
-    int ResolveIndex(int row, int col)
-    {
-        EnsureInBounds(row, col);
-        return ResolveIndexUnchekced(row, col);
-    }
-    void EnsureInBounds(int? row = null, int? col = null)
-    {
-        if (row.HasValue)
-            if (row < 0 || row >= _rowCount)
-                throw new IndexOutOfRangeException($"Row out of range (expected 0 <= row < {_rowCount}, but got {row})");
-        if (col.HasValue)
-            if (col < 0 || col >= _columnCount)
-                throw new IndexOutOfRangeException($"Columnout of range (expected 0 <= col < {_columnCount}, but got {col})");
-    }
-    void EnsureInBoundsP1(int? row = null, int? col = null)
-    {
-        if (row.HasValue)
-            if (row < 0 || row > _rowCount)
-                throw new IndexOutOfRangeException($"Row out of range (expected 0 <= row < {_rowCount}, but got {row})");
-        if (col.HasValue)
-            if (col < 0 || col > _columnCount)
-                throw new IndexOutOfRangeException($"Columnout of range (expected 0 <= col < {_columnCount}, but got {col})");
-    }
-    int ResolveIndexUnchekced(int row, int col)
-    {
-        return row * _columnCount + col;
     }
 
     void ITable<Paragraph>.InsertRow(int rowIndex, IReadOnlyList<Paragraph> item, TableLength length)

@@ -31,16 +31,6 @@ namespace Get.RichTextKit.Editor
         None,
 
         /// <summary>
-        /// Move one character to the left
-        /// </summary>
-        CharacterLeft,
-
-        /// <summary>
-        /// Move one character to the right
-        /// </summary>
-        CharacterRight,
-
-        /// <summary>
         /// Move up one line
         /// </summary>
         LineUp,
@@ -49,16 +39,6 @@ namespace Get.RichTextKit.Editor
         /// Move down one line
         /// </summary>
         LineDown,
-
-        /// <summary>
-        /// Move left one word
-        /// </summary>
-        WordLeft,
-
-        /// <summary>
-        /// Move right one word
-        /// </summary>
-        WordRight,
 
         /// <summary>
         /// Move up one page

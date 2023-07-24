@@ -18,6 +18,7 @@
 
 using Get.RichTextKit;
 using Get.RichTextKit.Editor;
+using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Utils;
 using System;
 
@@ -58,34 +59,7 @@ public partial class Document
         // Helper to get a word range
         TextRange getWordRange()
         {
-            // Get the paragraph and position in paragraph
-            var para = Paragraphs.GlobalChildrenFromCodePointIndex(position, out _, out _, out var paraCodePointIndex);
-            
-            // Find the word boundaries for this paragraph and find 
-            // the current word
-            var indicies = para.WordBoundaryIndicies;
-            var ii = indicies.BinarySearch(paraCodePointIndex);
-            if (ii < 0)
-                ii = (~ii - 1);
-            if (ii >= indicies.Count)
-                ii = indicies.Count - 1;
-
-            if (ii + 1 >= indicies.Count)
-            {
-                // Point is past end of paragraph
-                return new TextRange(
-                    para.GlobalInfo.CodePointIndex + indicies[ii],
-                    para.GlobalInfo.CodePointIndex + indicies[ii],
-                    true
-                );
-            }
-
-            // Create text range covering the entire word
-            return new TextRange(
-                para.GlobalInfo.CodePointIndex + indicies[ii],
-                para.GlobalInfo.CodePointIndex + indicies[ii + 1],
-                true
-            );
+            return rootParagraph.GetSelectionRange(position, ParagraphSelectionKind.Word);
         }
 
         // Helper to get a line range

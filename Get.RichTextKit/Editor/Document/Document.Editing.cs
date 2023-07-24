@@ -420,8 +420,7 @@ public partial class DocumentEditor
             return range;
 
         float? unused = null;
-        var nextPos = Navigate(range.EndCaretPosition, NavigationKind.CharacterRight, default, ref unused);
-
+        var nextPos = Navigate(new(range.EndCaretPosition), NavigationSnap.Character, NavigationDirection.Forward, true, ref unused).EndCaretPosition;
         var paraThis = Document.Paragraphs.LocalChildrenFromCodePointIndexAsIndex(range.EndCaretPosition, out var _);
         var paraNext = Document.Paragraphs.LocalChildrenFromCodePointIndexAsIndex(nextPos, out var _);
 

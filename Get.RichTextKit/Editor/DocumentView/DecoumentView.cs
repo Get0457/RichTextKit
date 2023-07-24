@@ -1,4 +1,5 @@
 ﻿using Get.EasyCSharp;
+using Get.RichTextKit.Editor.Paragraphs;
 using SkiaSharp;
 using System;
 using System.ComponentModel;
@@ -22,6 +23,7 @@ public partial class DocumentView : INotifyPropertyChanged
     }
     public DocumentViewSelection Selection { get; }
     public DocumentViewController Controller { get; }
+    internal Paragraph.LayoutInfo LayoutInfo => new(new(-XScroll, -YScroll), 0, 0, 0);
 
     [AutoEventNotifyProperty(OnChanged = nameof(RequestRedraw))]
     SKColor _SelectionColor = SKColors.Blue;

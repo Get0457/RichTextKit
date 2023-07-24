@@ -35,7 +35,28 @@ public partial class DocumentEditor
     DocumentParagraphs Paragraphs => Document.Paragraphs;
     int Length => Document.Layout.Length;
     Thickness Margin => Document.Layout.Margin;
-
+    public TextRange Navigate(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord)
+    {
+        switch (Document.rootParagraph.Navigate(selection, snap, direction, keepSelection, ref ghostXCoord, out var toReturn))
+        {
+            case NavigationStatus.Success:
+                return toReturn;
+            case NavigationStatus.MoveBefore:
+                // move to beginning
+                if (direction is NavigationDirection.Forward or NavigationDirection.Backward)
+                    selection.EndCaretPosition = Document.rootParagraph.StartCaretPosition;
+                if (!keepSelection) selection.Start = selection.End;
+                return selection;
+            case NavigationStatus.MoveAfter:
+                // move to end
+                if (direction is NavigationDirection.Forward or NavigationDirection.Backward)
+                    selection.EndCaretPosition = Document.rootParagraph.EndCaretPosition;
+                if (!keepSelection) selection.Start = selection.End;
+                return selection;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
     /// <summary>
     /// Handles keyboard navigation events
     /// </summary>
@@ -52,27 +73,11 @@ public partial class DocumentEditor
                 ghostXCoord = null;
                 return position;
 
-            case NavigationKind.CharacterLeft:
-                ghostXCoord = null;
-                return navigateIndicies(-1, p => p.CaretIndicies);
-
-            case NavigationKind.CharacterRight:
-                ghostXCoord = null;
-                return navigateIndicies(1, p => p.CaretIndicies);
-
             case NavigationKind.LineUp:
                 return navigateLine(-1, ref ghostXCoord);
 
             case NavigationKind.LineDown:
                 return navigateLine(1, ref ghostXCoord);
-
-            case NavigationKind.WordLeft:
-                ghostXCoord = null;
-                return navigateIndicies(-1, p => p.WordBoundaryIndicies);
-
-            case NavigationKind.WordRight:
-                ghostXCoord = null;
-                return navigateIndicies(1, p => p.WordBoundaryIndicies);
 
             case NavigationKind.PageUp:
                 return navigatePage(-1, ref ghostXCoord);
@@ -100,56 +105,6 @@ public partial class DocumentEditor
                 throw new ArgumentException("Unknown navigation kind");
         }
 
-        // Helper for character/word left/right
-        CaretPosition navigateIndicies(int direction, Func<Paragraph, IReadOnlyList<int>> getIndicies)
-        {
-            // Get the paragraph and position in paragraph
-            var para = Paragraphs.GlobalChildrenFromCodePointIndex(position, out var parent, out int paraIndex, out var paraCodePointIndex);
-            
-            // Find the current caret index
-            var indicies = getIndicies(para);
-            var ii = indicies.BinarySearch(paraCodePointIndex);
-
-            // Work out the new position
-            if (ii < 0)
-            {
-                ii = (~ii);
-                if (direction > 0)
-                    ii--;
-            }
-            ii += direction;
-
-
-            if (ii < 0)
-            {
-                // Move to end of previous paragraph
-                if (paraIndex > 0)
-                    return new CaretPosition(parent.Paragraphs[paraIndex - 1].GlobalInfo.CodePointIndex + parent.Paragraphs[paraIndex - 1].CodePointLength - 1);
-                else
-                    // Move to the position before this paragraph or the start of the document if there's nothing before
-                    return new CaretPosition(Math.Max(0, parent.Paragraphs[paraIndex].GlobalInfo.CodePointIndex - 1));
-            }
-
-            if (ii >= indicies.Count)
-            {
-                // Move to start of next paragraph
-                if (paraIndex + 1 < parent.Paragraphs.Count)
-                    return new CaretPosition(parent.Paragraphs[paraIndex + 1].GlobalInfo.CodePointIndex);
-                else
-                    // Move to the position after this paragraph or the end of the document if there's no more
-                    return new CaretPosition(
-                        Math.Min(parent.Paragraphs[paraIndex].GlobalInfo.CodePointIndex + parent.Paragraphs[paraIndex + 1].CodePointLength,
-                        Length - 1
-                    ));
-            }
-
-            // Move to new position in this paragraph
-            var pos = para.GlobalInfo.CodePointIndex + indicies[ii];
-            if (pos >= Length)
-                pos = Length - 1;
-            return new CaretPosition(pos);
-        }
-
         // Helper for line up/down
         CaretPosition navigateLine(int direction, ref float? xCoord)
         {
@@ -166,7 +121,7 @@ public partial class DocumentEditor
             // Work out which line to hit test
             var lineInfo = para.GetLineInfo(ci.LineIndex);
             var toLine = direction > 0 ? lineInfo.NextLine : lineInfo.PrevLine;
-            
+
             // Exceed paragraph?
             if (toLine is null)
             {
@@ -179,7 +134,8 @@ public partial class DocumentEditor
                     // Move to last line of previous paragraph
                     para = Paragraphs[paraIndex - 1];
                     toLine = para.GetLineInfo(^1).Line;
-                } else
+                }
+                else
                 {
                     // End of document?
                     if (paraIndex + 1 >= Paragraphs.Count)
@@ -190,7 +146,7 @@ public partial class DocumentEditor
                     toLine = para.GetLineInfo(0).Line;
                 }
             }
-            
+
 
             // Hit test the line
             var htr = para.HitTestLine(toLine.Value, xCoord.Value - Margin.Left - para.Margin.Left);

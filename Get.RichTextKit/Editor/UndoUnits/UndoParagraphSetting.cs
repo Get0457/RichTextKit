@@ -33,7 +33,6 @@ public class UndoParagraphSetting<T> : UndoUnit<Document, DocumentViewUpdateInfo
     {
         foreach (var run in bfsRuns)
         {
-            Debug.WriteLine(run.SubRunInfo);
             if (!ConfirmSetStyle(run.SubRunInfo.Paragraph))
                 SetStyles(run.NextLevelInfo);
         }
