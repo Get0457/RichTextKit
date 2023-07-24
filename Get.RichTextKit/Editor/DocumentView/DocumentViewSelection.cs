@@ -66,6 +66,7 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
             _Range = selectInfo.FinalSelection;
             StartCaretInfo = selectInfo.StartCaretInfo;
             EndCaretInfo = selectInfo.EndCaretInfo;
+            Info = selectInfo;
         }
         //var start = DocumentView.Controller.HitTest(new(0, 0));
         //var end = DocumentView.Controller.HitTest(new(0, DocumentView.ViewHeight));
@@ -95,10 +96,12 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
         {
             var selectInfo = DocumentView.OwnerDocument.Editor.GetSelectionInfo(Range);
             DocumentView.LayoutInfo.OffsetToThis(ref selectInfo);
+            Info = selectInfo;
             StartCaretInfo = selectInfo.StartCaretInfo;
             EndCaretInfo = selectInfo.EndCaretInfo;
         } else
         {
+            Info = null;
             StartCaretInfo = EndCaretInfo = DocumentView.Controller.GetCaretInfo(Range.EndCaretPosition);
         }
 
@@ -109,7 +112,7 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
         base.OnChanged(FormatName);
         PropertyChanged?.Invoke(this, new(FormatName));
     }
-    public IEnumerable<SubRunInfo> InterectingRuns => DocumentView.OwnerDocument.Paragraphs.GetInteractingRuns(Range);
+    public SelectionInfo? Info { get; private set; }
 
     public override void ApplyStyle(Func<IStyle, IStyle> styleModifier)
     {
