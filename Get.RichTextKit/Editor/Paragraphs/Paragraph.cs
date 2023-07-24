@@ -201,11 +201,3 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     protected internal virtual void OnParagraphAdded(Document owner) { Owner = owner; }
     protected internal virtual void OnParagraphRemoved(Document owner) { Owner = null; }
 }
-public record struct StyleRunEx(int Start, int Length, IStyle Style) : IRun
-{
-    public StyleRunEx(StyleRun styleRun) : this(styleRun.Start, styleRun.Length, styleRun.Style)
-    {
-
-    }
-    int IRun.Offset => Start;
-}
