@@ -40,6 +40,7 @@ public struct ReplaceTextStatus
     public bool IsSuccess { get; init; }
     public IParagraphCollection? FailToDeleteParent { get; init; }
     public Paragraph? FailToDeleteParagraph { get; init; }
+    public TextRange RequestedNewSelection { get; init; }
 }
 public partial class DocumentEditor
 {
@@ -173,11 +174,13 @@ public partial class DocumentEditor
         if (semantics == EditSemantics.Overtype && !range.IsRange)
             range = GetOvertypeRange(range);
 
+        ReplaceTextStatus status;
+
         // Try to extend the last undo operation
         if (Document.UndoManager.GetUnsealedUnit() is UndoReplaceTextGroup group &&
-            group.TryExtend(Document, range, text, semantics, imeCaretOffset))
-            return ReplaceTextStatus.Success;
-        ReplaceTextStatus status;
+            group.TryExtend(Document, range, text, semantics, imeCaretOffset, out status))
+            return status;
+
         // Wrap all edits in an undo group.  Note this is a custom
         // undo group that also fires the DocumentChanged notification
         // to views.
@@ -297,31 +300,6 @@ public partial class DocumentEditor
         return status;
     }
 
-    //void NewDeleteInternal(TextRange range)
-    //{
-    //    while (range.IsRange)
-    //    {
-    //        var paraIdx = Paragraphs.FromCodePointIndexAsIndex(range.CaretPosition, out var endIdx);
-    //        var para = Paragraphs[paraIdx];
-    //        var startIdx = Math.Max(range.Start - para.GlobalInfo.CodePointIndex, 0);
-    //        var isEnd = endIdx + 1 == para.Length;
-    //        var isStart = startIdx is 0;
-    //        if (isEnd && isStart)
-    //        {
-    //            // Delete Entire Paragraph
-    //            Paragraphs.Remove(para);
-    //        }
-    //        else
-    //        {
-    //            bool containsTheEnd = endIdx + 1 == para.Length;
-    //            if (containsTheEnd) endIdx--;
-    //            para.DeletePartial(Document.UndoManager, new(Parent: , Index: 0, Offset: startIdx, Length: endIdx - startIdx, Partial: true));
-    //            if (containsTheEnd) para.TryJoin(Document.UndoManager, paraIdx);
-    //        }
-    //        range = new(range.Start, startIdx + para.GlobalInfo.CodePointIndex, true);
-    //    }
-    //}
-
     /// <summary>
     /// Insert text into the document
     /// </summary>
@@ -357,7 +335,7 @@ public partial class DocumentEditor
             {
                 if (paraA is ITextParagraph)
                     Document.UndoManager.Do(new UndoInsertText(
-                        paraA.GlobalInfo.CodePointIndex,
+                        paraA.GlobalParagraphIndex,
                         indexInParagraph,
                         text.Extract(firstPart.Offset, firstPart.Length)
                     ));
@@ -370,7 +348,7 @@ public partial class DocumentEditor
             if (lastPart.Length != 0)
             {
                 if (paraB is ITextParagraph)
-                    Document.UndoManager.Do(new UndoInsertText(paraB.GlobalInfo.CodePointIndex, 0, text.Extract(lastPart.Offset, lastPart.Length)));
+                    Document.UndoManager.Do(new UndoInsertText(paraB.GlobalParagraphIndex, 0, text.Extract(lastPart.Offset, lastPart.Length)));
                 else endingAppendingIdx = parts.Length;
             }
 
@@ -395,7 +373,7 @@ public partial class DocumentEditor
             {
                 if (tp.TextBlock.Length == indexInParagraph)
                     indexInParagraph--;
-                Document.UndoManager.Do(new UndoInsertText(para.GlobalInfo.CodePointIndex, indexInParagraph, text));
+                Document.UndoManager.Do(new UndoInsertText(para.GlobalParagraphIndex, indexInParagraph, text));
             }
             else
             {
@@ -435,14 +413,14 @@ public partial class DocumentEditor
     /// <param name="x">The x-coordinate relative to top-left of the document</param>
     /// <param name="y">The y-coordinate relative to top-left of the document</param>
     /// <returns>A HitTestResult</returns>
-    public HitTestResult HitTest(PointF pt) => Document.rootParagraph.HitTest(pt);
+    public HitTestResult HitTest(PointF pt) => Document.rootParagraph.LocalInfo.OffsetFromThis(Document.rootParagraph.HitTest(pt));
     /// <summary>
     /// Calculates useful information for displaying a caret
     /// </summary>
     /// <param name="position">The caret position</param>
     /// <returns>A CaretInfo struct, or CaretInfo.None</returns>
     public CaretInfo GetCaretInfo(CaretPosition position)
-        => Document.rootParagraph.GetCaretInfo(position);
+        => Document.rootParagraph.LocalInfo.OffsetFromThis(Document.rootParagraph.GetCaretInfo(position));
     public SelectionInfo GetSelectionInfo(TextRange range)
-        => Document.rootParagraph.GetSelectionInfo(new(Document.rootParagraph, 0), range);
+        => Document.rootParagraph.LocalInfo.OffsetFromThis(Document.rootParagraph.GetSelectionInfo(range));
 }

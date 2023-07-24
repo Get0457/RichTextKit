@@ -170,7 +170,7 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     {
         if (range.Offset + range.Length >= /* last index */ _textBlock.Length)
             range = range with { Length = _textBlock.Length - range.Offset };
-        UndoManager.Do(new UndoDeleteText(GlobalInfo.CodePointIndex, range.Offset, range.Length));
+        UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, range.Offset, range.Length));
     }
     public override bool CanJoinWith(Paragraph next)
     {
@@ -178,7 +178,7 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     }
     public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
     {
-        UndoManager.Do(new UndoJoinTextParagraphs(GlobalInfo.CodePointIndex));
+        UndoManager.Do(new UndoJoinTextParagraphs(GlobalParagraphIndex));
         return true;
     }
     public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
@@ -190,7 +190,7 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
 
         var paraB = new TextParagraph(paraA.TextBlock.Copy(splitIndex, CodePointLength));
         if (splitIndex != CodePointLength - 1)
-            UndoManager.Do(new UndoDeleteText(paraA.GlobalInfo.CodePointIndex, splitIndex, TextBlock.Length - splitIndex - 1));
+            UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, splitIndex, TextBlock.Length - splitIndex - 1));
         return paraB;
     }
 

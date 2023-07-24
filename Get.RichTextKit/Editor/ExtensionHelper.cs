@@ -37,7 +37,7 @@ static class ExtensionHelper
     /// <param name="length">The length to refer to. If null, it refers to the end range</param>
     /// <returns>Enumerable containing all sequence from start to end</returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static IEnumerable<int> GetEnumerable(Range range, int? length = null, int step = 1)
+    public static IEnumerable<int> Iterate(this Range range, int? length = null, int step = 1, bool startInclusive = true, bool endInclusive = false)
     {
         if (length is null)
         {
@@ -45,19 +45,24 @@ static class ExtensionHelper
             if (range.End.IsFromEnd)
                 throw new ArgumentException("Range.End cannot start from the end value");
         }
-        var (offset, len) = range.GetOffsetAndLength(length.Value);
+        var start = range.Start.GetOffset(length.Value);
+        var end = range.End.GetOffset(length.Value);
         switch (step)
         {
             case > 0:
-                for (int i = 0; i < len; i += step)
+                if (!startInclusive)
+                    start += step;
+                for (int i = start; endInclusive ? i <= end : i < end; i += step)
                 {
-                    yield return i + offset;
+                    yield return i;
                 }
                 break;
-            case < 0:
-                for (int i = len - 1; i >= 0; i += step) // step is negative
+            case < 0: // step is negative so addition makes the value less
+                if (!endInclusive)
+                    end += step;
+                for (int i = end; startInclusive ? i >= start : i > start; i += step)
                 {
-                    yield return i + offset;
+                    yield return i;
                 }
                 break;
             default:
@@ -79,19 +84,11 @@ static class ExtensionHelper
             yield return i;
         }
     }
-    /// <summary>
-    /// Create Enumerable from Range
-    /// </summary>
-    /// <param name="range">The `range` to create the enumerable. `range.End` must not be from end. If `range.Start` is from end, the end value is infered from `range.End`</param>
-    /// <returns>Enumerable containing all sequence from start to end</returns>
-    /// <exception cref="ArgumentException"></exception>
-    public static IEnumerable<int> IncludeEnd(this Range range)
+
+    public static IEnumerable<(int Index, T Item)> WithIndex<T>(this IEnumerable<T> item)
     {
-        if (range.End.IsFromEnd) throw new ArgumentException("Range.End cannot start from the end value");
-        if (range.Start.IsFromEnd) range = (range.End.Value - range.Start.Value)..range.End.Value;
-        for (int i = range.Start.Value; i <= range.End.Value; i++)
-        {
-            yield return i;
-        }
+        int idx = 0;
+        foreach (var a in item)
+            yield return (idx++, a);
     }
 }

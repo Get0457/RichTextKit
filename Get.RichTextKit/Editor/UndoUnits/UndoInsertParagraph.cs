@@ -21,6 +21,10 @@ class UndoInsertParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     public override void Do(Document context)
     {
         _parent.Paragraphs.Insert(_index, _paragraph);
+        foreach (var i in _index.._parent.Paragraphs.Count)
+        {
+            _parent.Paragraphs[i].ParentInfo = _parent.Paragraphs[i].ParentInfo with { Index = i };
+        }
         _paragraph.OnParagraphAdded(context);
     }
     public override void Redo(Document context)
@@ -34,6 +38,10 @@ class UndoInsertParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     public override void Undo(Document context)
     {
         _parent.Paragraphs.RemoveAt(_index);
+        foreach (var i in _index.._parent.Paragraphs.Count)
+        {
+            _parent.Paragraphs[i].ParentInfo = _parent.Paragraphs[i].ParentInfo with { Index = i };
+        }
         _paragraph.OnParagraphRemoved(context);
         context.Layout.Invalidate();
         context.Layout.EnsureValid();

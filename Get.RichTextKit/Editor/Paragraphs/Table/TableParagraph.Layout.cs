@@ -48,6 +48,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
             {
                 foreach (var (colIdx, child) in row.WithColumnIndex())
                 {
+                    child.ParentInfo = new(this, ResolveIndexUnchekced(rowIdx, colIdx));
                     // Skips layout for those columns we already layout
                     if (!colsRequestedWidth[colIdx].HasValue)
                         child.Layout(parentInfo with { AvaliableWidth = ColumnsWidth[colIdx] });

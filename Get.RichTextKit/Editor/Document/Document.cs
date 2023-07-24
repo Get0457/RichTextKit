@@ -45,6 +45,7 @@ public partial class Document
         // Create our undo manager
         UndoManager = new UndoManager<Document, DocumentViewUpdateInfo>(this);
         UndoManager.EndOperation += FireDocumentChanged;
+        Layout.Invalidate();
     }
 
     /// <summary>
@@ -85,22 +86,7 @@ public partial class Document
     /// <returns>The text as a Utf32Buffer</returns>
     public Utf32Buffer GetText(TextRange range)
     {
-        // Normalize and clamp range
-        range = range.Normalized.Clamp(Layout.Length - 1);
-
-        // Get all subruns
-        var buf = new Utf32Buffer();
-        foreach (var subrun in Paragraphs.GetInteractingRuns(range))
-        {
-            // Get the paragraph
-            var para = subrun.Paragraph;
-            
-            // Add the text
-            para.GetTextByAppendTextToBuffer(buf, subrun.Offset, subrun.Length);
-        }
-
-        // Done!
-        return buf;
+        return rootParagraph.GetText(range.Minimum, range.Length);
     }
     TextAlignment _defaultAlignment = TextAlignment.Left;
 

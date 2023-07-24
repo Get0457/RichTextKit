@@ -51,12 +51,12 @@ partial class Paragraph
     /// <returns>A HitTestResult</returns>
     public abstract HitTestResult HitTestLine(int lineIndex, float x);
 
-    public virtual SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection) => new(
+    public virtual SelectionInfo GetSelectionInfo(TextRange selection) => new(
         selection, null, GetCaretInfo(selection.StartCaretPosition), GetCaretInfo(selection.EndCaretPosition),
         this,
-        GetInteractingRuns(parentInfo, selection),
-        GetInteractingRunsRecursive(parentInfo, selection),
-        GetBFSInteractingRuns(parentInfo, selection)
+        GetInteractingRuns(selection),
+        GetInteractingRunsRecursive(selection),
+        GetBFSInteractingRuns(selection)
     );
     public abstract TextRange GetSelectionRange(CaretPosition position, ParagraphSelectionKind kind);
 }

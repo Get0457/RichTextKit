@@ -173,39 +173,39 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
             r = 0..(r.End.Value - r.Start.Value - len);
         }
     }
-    public override SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection)
+    public override SelectionInfo GetSelectionInfo(TextRange selection)
     {
         if (IsRangeWithinTheSameChildParagraph(selection, out var paraIndex, out var newRange))
         {
             return
                 Children[paraIndex].LocalInfo.OffsetFromThis(
-                Children[paraIndex].GetSelectionInfo(new(this, paraIndex), newRange)
+                Children[paraIndex].GetSelectionInfo(newRange)
             );
         }
         else
-            return base.GetSelectionInfo(parentInfo, selection);
+            return base.GetSelectionInfo(selection);
     }
     protected virtual IEnumerable<SubRun> GetLocalChildrenInteractingRange(TextRange selection)
         => Children.AsIReadOnlyList().LocalGetInterectingRuns(selection.Minimum, selection.Length);
-    protected override IEnumerable<SubRunInfo> GetInteractingRuns(ParentInfo parentInfo, TextRange selection)
+    protected override IEnumerable<SubRunInfo> GetInteractingRuns(TextRange selection)
     {
         var paraIdx1 = LocalChildrenFromCodePointIndexAsIndex(selection.StartCaretPosition, out int cpi1);
         if (IsRangeWithinTheSameChildParagraph(selection, out var paraIndex, out var newRange))
-            foreach (var subRun in GetInteractingRuns(Children[paraIndex], new(this, paraIndex), newRange))
+            foreach (var subRun in GetInteractingRuns(Children[paraIndex], newRange))
                 yield return subRun;
         else
             foreach (var subRun in GetLocalChildrenInteractingRange(selection))
                 yield return new SubRunInfo(new(this, subRun.Index), subRun.Offset, subRun.Length, subRun.Partial);
     }
-    protected override IEnumerable<SubRunInfo> GetInteractingRunsRecursive(ParentInfo parentInfo, TextRange selection)
+    protected override IEnumerable<SubRunInfo> GetInteractingRunsRecursive(TextRange selection)
     {
         if (IsRangeWithinTheSameChildParagraph(selection, out var paraIndex, out var newRange))
-            foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[paraIndex], new(this, paraIndex), newRange))
+            foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[paraIndex], newRange))
                 yield return subRunRecursive;
         else
             foreach (var subRun in GetLocalChildrenInteractingRange(selection))
             {
-                foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[subRun.Index], parentInfo, new(subRun.Offset, subRun.Offset + subRun.Length)))
+                foreach (var subRunRecursive in GetInteractingRunsRecursive(Children[subRun.Index], new(subRun.Offset, subRun.Offset + subRun.Length)))
                     yield return subRunRecursive;
             }
     }

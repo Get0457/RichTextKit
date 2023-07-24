@@ -36,8 +36,9 @@ public partial class VerticalParagraph : PanelParagraph
         int cpiOffset = 0;
         int displayLineOffset = 0;
         int lineOffset = 0;
-        foreach (var child in Children)
+        foreach (var (idx, child) in Children.WithIndex())
         {
+            child.ParentInfo = new(this, idx);
             child.Layout(parentInfo);
             child.LocalInfo = new(
                 ContentPosition: OffsetMargin(new(0, YOffset), child.Margin),

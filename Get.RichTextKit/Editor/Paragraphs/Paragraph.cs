@@ -81,28 +81,28 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     public abstract void Paint(SKCanvas canvas, PaintOptions options);
 
     // So protected members can access the method
-    protected static IEnumerable<SubRunInfo> GetInteractingRuns(Paragraph para, ParentInfo parentInfo, TextRange selection)
-        => para.GetInteractingRuns(parentInfo, selection);
-    protected virtual IEnumerable<SubRunInfo> GetInteractingRuns(ParentInfo parentInfo, TextRange selection)
+    protected static IEnumerable<SubRunInfo> GetInteractingRuns(Paragraph para, TextRange selection)
+        => para.GetInteractingRuns(selection);
+    protected virtual IEnumerable<SubRunInfo> GetInteractingRuns(TextRange selection)
     {
         yield return new(
-            parentInfo, selection.Minimum, Math.Abs(selection.Length),
+            ParentInfo, selection.Minimum, Math.Abs(selection.Length),
             !(selection.Minimum <= 0 && selection.Maximum >= CodePointLength)
         );
     }
-    protected static IEnumerable<SubRunInfo> GetInteractingRunsRecursive(Paragraph para, ParentInfo parentInfo, TextRange selection)
-        => para.GetInteractingRunsRecursive(parentInfo, selection);
-    protected virtual IEnumerable<SubRunInfo> GetInteractingRunsRecursive(ParentInfo parentInfo, TextRange selection)
-        => GetInteractingRuns(parentInfo, selection);
-    public IEnumerable<SubRunBFSInfo> GetBFSInteractingRuns(ParentInfo parentInfo, TextRange selection)
+    protected static IEnumerable<SubRunInfo> GetInteractingRunsRecursive(Paragraph para, TextRange selection)
+        => para.GetInteractingRunsRecursive(selection);
+    protected virtual IEnumerable<SubRunInfo> GetInteractingRunsRecursive(TextRange selection)
+        => GetInteractingRuns(selection);
+    public IEnumerable<SubRunBFSInfo> GetBFSInteractingRuns(TextRange selection)
     {
-        foreach (var subRun in GetInteractingRuns(parentInfo, selection))
+        foreach (var subRun in GetInteractingRuns(selection))
         {
             // We can do this because IEnumerable is lazy so the function will actually not evaluate here
             var childEnumerable =
                 subRun.Paragraph == this ? Enumerable.Empty<SubRunBFSInfo>() :
                 subRun.Paragraph.GetBFSInteractingRuns(
-                    subRun.ParentInfo, new(subRun.Offset, subRun.Offset + subRun.Length)
+                    new(subRun.Offset, subRun.Offset + subRun.Length)
                 );
             if (subRun.Partial)
             {

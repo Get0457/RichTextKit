@@ -131,11 +131,11 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         canvas.DrawLine(y0: 0, y1: height, x0: colEnd, x1: colEnd, paint: paint);
         canvas.Restore();
     }
-    public override SelectionInfo GetSelectionInfo(ParentInfo parentInfo, TextRange selection)
+    public override SelectionInfo GetSelectionInfo(TextRange selection)
     {
         var sel = TableSelection.FromRange(this, selection);
         if (!sel.IsValid)
-            return base.GetSelectionInfo(parentInfo, selection);
+            return base.GetSelectionInfo(selection);
         static SKRect GetCaretBounds(bool isAtRight, TableIndex idx, out RectangleF bounds)
         {
             if (isAtRight)
@@ -161,9 +161,9 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
                 CaretXCoord = endBounds.X
             },
             this,
-            GetInteractingRuns(parentInfo, selTextRange),
-            GetInteractingRunsRecursive(parentInfo, selTextRange),
-            GetBFSInteractingRuns(parentInfo, selTextRange)
+            GetInteractingRuns(selTextRange),
+            GetInteractingRunsRecursive(selTextRange),
+            GetBFSInteractingRuns(selTextRange)
         );
     }
     protected override IEnumerable<SubRun> GetLocalChildrenInteractingRange(TextRange selection)
@@ -174,9 +174,9 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
                 yield return lcir;
         else
         {
-            foreach (int row in (sel.Minimum.Row..sel.Maximum.Row).IncludeEnd())
+            foreach (int row in (sel.Minimum.Row..sel.Maximum.Row).Iterate(endInclusive: true))
             {
-                foreach (int col in (sel.Minimum.Column..sel.Maximum.Column).IncludeEnd())
+                foreach (int col in (sel.Minimum.Column..sel.Maximum.Column).Iterate(endInclusive: true))
                 {
                     var idx = ResolveIndexUnchekced(row, col);
                     var para = Children[idx];

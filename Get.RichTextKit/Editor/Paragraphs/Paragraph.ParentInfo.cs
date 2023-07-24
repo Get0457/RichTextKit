@@ -14,7 +14,6 @@ partial class Paragraph
     {
         get
         {
-
             var parentInfo = ParentInfo;
             if (parentInfo.Parent is null)
             {

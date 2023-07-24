@@ -35,8 +35,9 @@ public class HorizontalParagraph : PanelParagraph
         float XOffset = 0;
         int cpiOffset = 0;
         int lineOffset = 0;
-        foreach (var child in Children)
+        foreach (var (idx, child) in Children.WithIndex())
         {
+            child.ParentInfo = new(this, idx);
             child.Layout(parentInfo);
             child.LocalInfo = new(
                 ContentPosition: OffsetMargin(new(XOffset + Padding.Left, Padding.Top), child.Margin),
