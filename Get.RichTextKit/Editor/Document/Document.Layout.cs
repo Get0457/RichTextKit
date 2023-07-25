@@ -120,7 +120,6 @@ public partial class DocumentLayout : INotifyPropertyChanged
         _measuredWidth += Margin.Left + Margin.Right;
         _measuredHeight = yCoord + Math.Max(prevYMargin, Margin.Bottom);
         PropertyChanged?.Invoke(this, new(nameof(MeasuredSize)));
-        _totalLength = codePointIndex;
         _totalLines = lineIndex;
         _totalDisplayLines = displayLineIndex;
 
@@ -161,7 +160,6 @@ public partial class DocumentLayout : INotifyPropertyChanged
             return new(LineWrap ? PageWidth : _measuredWidth, _measuredHeight);
         }
     }
-    int _totalLength;
     int _totalLines;
     int _totalDisplayLines;
 
@@ -175,7 +173,7 @@ public partial class DocumentLayout : INotifyPropertyChanged
         get
         {
             EnsureValid();
-            return _totalLength;
+            return Document.rootParagraph.CodePointLength;
         }
     }
     /// <summary>

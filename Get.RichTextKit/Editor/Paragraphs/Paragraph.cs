@@ -86,8 +86,7 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     protected virtual IEnumerable<SubRunInfo> GetInteractingRuns(TextRange selection)
     {
         yield return new(
-            ParentInfo, selection.Minimum, Math.Abs(selection.Length),
-            !(selection.Minimum <= 0 && selection.Maximum >= CodePointLength)
+            ParentInfo, selection.Minimum, Math.Abs(selection.Length)
         );
     }
     protected static IEnumerable<SubRunInfo> GetInteractingRunsRecursive(Paragraph para, TextRange selection)
@@ -177,10 +176,11 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     // with the paragraphs collection.
     int IRun.Offset => GlobalInfo.CodePointIndex;
     int IRun.Length => CodePointLength;
-
-    public abstract void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range);
+    public abstract bool ShouldDeletAll(DeleteInfo deleteInfo);
+    public abstract bool CanDeletePartial(DeleteInfo deleteInfo, out TextRange requestedSelection);
+    public abstract bool DeletePartial(DeleteInfo deleteInfo, out TextRange requestedSelection, UndoManager<Document, DocumentViewUpdateInfo> UndoManager);
     public virtual bool CanJoinWith(Paragraph other) { return false; }
-    public virtual bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex) { return false; }
+    public virtual bool TryJoinWithNextParagraph(UndoManager<Document, DocumentViewUpdateInfo> UndoManager) { return false; }
     public abstract Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex);
     public abstract void GetTextByAppendTextToBuffer(Utf32Buffer buffer, int position, int length);
     public Utf32Buffer GetText(int position, int length)

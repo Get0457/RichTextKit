@@ -106,7 +106,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     }
 
     /// <inheritdoc />
-    public override int CodePointLength => Children.Sum(x => x.CodePointLength);// + 1;
+    public override int CodePointLength => Children.Sum(x => x.CodePointLength) + 1;
 
     public override int LineCount => Children.Sum(x => x.LineCount);
 
@@ -132,6 +132,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
             para.GetTextByAppendTextToBuffer(bufToAdd, r.Start.Value, len);
             r = 0..(r.End.Value - r.Start.Value - len);
         }
+        bufToAdd.Add(new int[] { Document.NewParagraphSeparator });
     }
     public override IStyle GetStyleAtPosition(CaretPosition position)
     {
@@ -189,13 +190,12 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         => Children.AsIReadOnlyList().LocalGetInterectingRuns(selection.Minimum, selection.Length);
     protected override IEnumerable<SubRunInfo> GetInteractingRuns(TextRange selection)
     {
-        var paraIdx1 = LocalChildrenFromCodePointIndexAsIndex(selection.StartCaretPosition, out int cpi1);
         if (IsRangeWithinTheSameChildParagraph(selection, out var paraIndex, out var newRange))
             foreach (var subRun in GetInteractingRuns(Children[paraIndex], newRange))
                 yield return subRun;
         else
             foreach (var subRun in GetLocalChildrenInteractingRange(selection))
-                yield return new SubRunInfo(new(this, subRun.Index), subRun.Offset, subRun.Length, subRun.Partial);
+                yield return new SubRunInfo(new(this, subRun.Index), subRun.Offset, subRun.Length);
     }
     protected override IEnumerable<SubRunInfo> GetInteractingRunsRecursive(TextRange selection)
     {

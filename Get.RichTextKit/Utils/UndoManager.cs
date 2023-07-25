@@ -534,8 +534,13 @@ namespace Get.RichTextKit.Utils
     /// <typeparam name="T">The document context type</typeparam>
     public abstract class UndoUnit<T, TInfo>
     {
+        public bool ShouldNotifyInfo { get; set; } = true;
         public event Action<TInfo>? OnNotifyInfo;
-        protected void NotifyInfo(TInfo info) => OnNotifyInfo?.Invoke(info);
+        protected void NotifyInfo(TInfo info)
+        {
+            if (ShouldNotifyInfo)
+                OnNotifyInfo?.Invoke(info);
+        }
 
         /// <summary>
         /// Constructs a new UndoUnit

@@ -54,11 +54,7 @@ public partial class VerticalParagraph : PanelParagraph
     }
     public override int DisplayLineCount => 1;
 
-    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
-    {
-        //UndoManager.Do(new UndoDeleteText(_textBlock, range.Offset, range.Length));
-    }
-    public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
+    public override bool TryJoinWithNextParagraph(UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
     {
         return false;
     }

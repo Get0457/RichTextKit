@@ -39,11 +39,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     }
     public override int DisplayLineCount => 1;
 
-    public override void DeletePartial(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, SubRunInfo range)
-    {
-
-    }
-    public override bool TryJoin(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int thisIndex)
+    public override bool TryJoinWithNextParagraph(UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
     {
         return false;
     }
@@ -222,6 +218,13 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
             sel = sel with { End = sel.End with { Column = _columnCount - 1 } };
         newSelection = sel.TextRange;
         return NavigationStatus.Success;
+    }
+    public override bool ShouldDeletAll(DeleteInfo deleteInfo)
+    {
+        var sel = TableSelection.FromRange(this, deleteInfo.Range);
+        var (r1, c1) = sel.Minimum;
+        var (r2, c2) = sel.Maximum;
+        return r1 is 0 && c1 is 0 && r2 == _rowCount - 1 && c2 == _columnCount - 1;
     }
 }
 static partial class Extension

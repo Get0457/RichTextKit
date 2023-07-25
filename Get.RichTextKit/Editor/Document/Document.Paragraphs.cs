@@ -174,18 +174,20 @@ public class DocumentParagraphs : IParagraphCollection
                 yield return new SubRunInfo(
                     ParentInfo: new(parent, i),
                     Offset: srOffset,
-                    Length: srLength,
-                    Partial: para.CodePointLength != srLength
+                    Length: srLength
                 );
             }
         }
     }
 }
-public readonly record struct SubRunInfo(ParentInfo ParentInfo, int Offset, int Length, bool Partial)
+public readonly record struct SubRunInfo(ParentInfo ParentInfo, int Offset, int Length)
 {
     public Paragraph Paragraph => Parent.Paragraphs[Index];
     public IParagraphCollection Parent => ParentInfo.Parent;
     public int Index => ParentInfo.Index;
+    public bool Partial =>
+        Offset >= Paragraph.StartCaretPosition.CodePointIndex &&
+        Offset + Length >= Paragraph.EndCaretPosition.CodePointIndex;
 }
 public readonly record struct SubRunBFSInfo(SubRunInfo SubRunInfo, IEnumerable<SubRunBFSInfo> NextLevelInfo)
 {

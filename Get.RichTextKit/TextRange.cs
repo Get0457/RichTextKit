@@ -18,6 +18,7 @@
 
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Xml.Schema;
 
 namespace Get.RichTextKit
@@ -314,6 +315,14 @@ namespace Get.RichTextKit
         public override int GetHashCode()
         {
             return Start.GetHashCode() ^ End.GetHashCode();
+        }
+        public bool Contains(TextRange range)
+        {
+            return Minimum <= range.Minimum && Maximum >= range.Maximum;
+        }
+        public bool Contains(int codePointIndex, bool endInclusive = false)
+        {
+            return Minimum <= codePointIndex && (endInclusive ? Maximum >= codePointIndex : Maximum > codePointIndex);
         }
     }
 }

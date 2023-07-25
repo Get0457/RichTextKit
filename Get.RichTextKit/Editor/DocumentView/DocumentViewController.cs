@@ -2,6 +2,7 @@
 using Get.RichTextKit.Editor.UndoUnits;
 using System.Drawing;
 using Get.RichTextKit.Styles;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Get.RichTextKit.Editor.DocumentView;
 
@@ -67,23 +68,10 @@ public partial class DocumentViewController
                 altPosition: false
             ),
             "".AsSpan(),
-            deleteFront ? EditSemantics.ForwardDelete : EditSemantics.Backspace
+            deleteFront ? EditSemantics.ForwardDelete : EditSemantics.Backspace,
+            isNonSelectionDeletion: !selection.IsRange
         );
-        if (status.IsSuccess)
-        {
-            if (selection.IsRange || deleteFront)
-                MoveCaret(new(selection.Minimum));
-            else
-                MoveCaret(new(selection.Minimum - 1));
-        }
-        else
-        {
-            if (status.FailToDeleteParent is Paragraph p)
-            {
-                var idx = p.GlobalInfo.CodePointIndex;
-                Select(new(idx, idx + p.CodePointLength, altPosition: true));
-            }
-        }
+        Select(status.RequestedNewSelection);
     }
     float? _ghostXCoordinate;
     public void MoveCaret(CaretPosition position) => Select(new(position));
@@ -207,10 +195,12 @@ public partial class DocumentViewController
         using (DocumentView.OwnerDocument.UndoManager.OpenGroup("Insert New Paragraph"))
         {
             Type(Document.NewParagraphSeparator.ToString());
+            var selection = DocumentView.Selection.Range;
             DocumentView.OwnerDocument.Paragraphs.GlobalChildrenFromCodePointIndex(DocumentView.Selection.Range.EndCaretPosition, out var parent, out var paragraphIndex, out _);
             DocumentView.OwnerDocument.UndoManager.Do(new UndoInsertParagraph(parent, paragraphIndex, paragraph));
             DocumentView.OwnerDocument.Layout.Invalidate();
             DocumentView.OwnerDocument.Layout.EnsureValid();
+            DocumentView.OwnerDocument.InvokeTextChanged(new(selection.Minimum, selection.Minimum + Math.Max(selection.Normalized.Length, paragraph.CodePointLength)));
             DocumentView.OwnerDocument.RequestRedraw();
         }
     }

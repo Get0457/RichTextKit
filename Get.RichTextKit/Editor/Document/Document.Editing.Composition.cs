@@ -62,7 +62,7 @@ public partial class DocumentEditor
         if (!IsImeComposing)
             return;
 
-        ReplaceTextInternal(_imeInitialSelection, text, EditSemantics.ImeComposition, caretOffset);
+        ReplaceTextInternal(_imeInitialSelection, text, EditSemantics.ImeComposition, caretOffset, isNonSelectionDeletion: false);
     }
 
     /// <summary>

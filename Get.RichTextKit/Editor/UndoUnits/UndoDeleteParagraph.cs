@@ -3,6 +3,7 @@
 using Get.RichTextKit.Editor.DocumentView;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Editor.Paragraphs.Panel;
+using Get.RichTextKit.Editor.Structs;
 using Get.RichTextKit.Utils;
 using System.Diagnostics;
 
@@ -10,16 +11,14 @@ namespace Get.RichTextKit.Editor.UndoUnits;
 
 class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
 {
-    IParagraphCollection _parent;
-    public UndoDeleteParagraph(IParagraphCollection parent, int index)
+    public UndoDeleteParagraph(ParagraphIndex paraIndex)
     {
-        _parent = parent;
-        _index = index;
+        _paraIndex = paraIndex;
     }
 
     public override void Do(Document context)
     {
-        _paragraph = _parent.Paragraphs[_index];
+        _paragraph = context.Paragraphs.GetParentAndChild(_paraIndex, out var _parent, out var _index);
         _parent.Paragraphs.RemoveAt(_index);
         foreach (var i in _index.._parent.Paragraphs.Count)
         {
@@ -36,6 +35,7 @@ class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
 
     public override void Undo(Document context)
     {
+        context.Paragraphs.GetParentAndChild(_paraIndex, out var _parent, out var _index);
         _parent.Paragraphs.Insert(_index, _paragraph);
         foreach (var i in _index.._parent.Paragraphs.Count)
         {
@@ -46,6 +46,6 @@ class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
         NotifyInfo(new(NewSelection: new(_paragraph.GlobalInfo.CodePointIndex + _paragraph.CodePointLength)));
     }
 
-    int _index;
+    ParagraphIndex _paraIndex;
     Paragraph _paragraph;
 }

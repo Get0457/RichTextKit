@@ -186,5 +186,14 @@ partial class Paragraph
             OffsetYToThis(ref y);
             return y;
         }
+        public void OffsetToThis(ref DeleteInfo info)
+        {
+            info = info with { Range = OffsetToThis(info.Range) };
+        }
+        public DeleteInfo OffsetToThis(DeleteInfo info)
+        {
+            OffsetToThis(ref info);
+            return info;
+        }
     }
 }

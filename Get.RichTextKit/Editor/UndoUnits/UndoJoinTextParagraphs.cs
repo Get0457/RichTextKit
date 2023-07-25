@@ -19,13 +19,20 @@ class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
         var secondPara = parent.Paragraphs[_paragraph + 1];
 
         // Remember what we need to undo
-        _splitPoint = firstPara.CodePointLength;
+        _splitPoint = firstPara.CodePointLength - 1 /* -1 for the paragraph separator */;
         _firstParaGlobalCPI = firstPara.GlobalInfo.CodePointIndex;
         _removedParagraph = secondPara;
 
         // Copy all text from the second paragraph
         if (firstPara is ITextParagraph firstTextPara && secondPara is ITextParagraph secondTextPara)
+        {
+            // Delete the paragraph separator
+            _paragraphSeparator = firstTextPara.TextBlock.Extract(firstTextPara.TextBlock.Length - 1, 1);
+            Debug.Assert(_paragraphSeparator.Length == 1 && _paragraphSeparator.CodePoints[0] is Document.NewParagraphSeparator);
+            firstTextPara.TextBlock.DeleteText(firstTextPara.TextBlock.Length - 1, 1);
+            // Add the second paragraph text
             firstTextPara.TextBlock.AddText(secondTextPara.TextBlock);
+        }
 
         // Remove the joined paragraph
         secondPara.OnParagraphRemoved(context);
@@ -49,7 +56,12 @@ class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
         // Delete the joined text from the first paragraph
         var firstPara = context.Paragraphs.GetParentAndChild(_paraIndex, out var parent, out var _paragraph);
         if (firstPara is ITextParagraph firstTextPara)
+        {
+            // Delete the second paragraph text
             firstTextPara.TextBlock.DeleteText(_splitPoint, firstTextPara.TextBlock.Length - _splitPoint);
+            // Add the paragraph separator back
+            firstTextPara.TextBlock.AddText(_paragraphSeparator);
+        }
         else Debugger.Break();
         // Restore the split paragraph
         var _index = _paragraph + 1;
@@ -64,7 +76,7 @@ class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
         context.Layout.EnsureValid();
         NotifyInfo(new(NewSelection: new(_removedParagraph.GlobalInfo.CodePointIndex + _removedParagraph.CodePointLength)));
     }
-
+    StyledText _paragraphSeparator;
     ParagraphIndex _paraIndex;
     int _splitPoint;
     int _firstParaGlobalCPI;
