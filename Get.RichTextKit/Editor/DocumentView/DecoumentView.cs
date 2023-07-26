@@ -38,7 +38,7 @@ public partial class DocumentView : INotifyPropertyChanged
             SelectionColor = _SelectionColor,
             Edging = SKFontEdging.SubpixelAntialias,
             TextDefaultColor = textDefaultColor
-        });
+        }, ownerView: OwnerView);
     }
     [AutoEventNotifyProperty(OnChanged = nameof(UpdateScroll))]
     float _ViewHeight;

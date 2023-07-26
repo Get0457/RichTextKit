@@ -60,6 +60,8 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     protected Paragraph() { }
     public abstract IStyle StartStyle { get; }
     public abstract IStyle EndStyle { get; }
+
+    public ParagraphProperties Properties { get; } = new();
     
     /// <inheritdoc cref="Layout(LayoutParentInfo)"/>
     protected abstract void LayoutOverride(LayoutParentInfo owner);
@@ -68,17 +70,23 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     /// </summary>
     /// <param name="owner">The TextDocument that owns this paragraph</param>
     public void Layout(LayoutParentInfo owner)
-        => LayoutOverride(owner with { AvaliableWidth = owner.AvaliableWidth - Margin.Left - Margin.Right });
+        => LayoutOverride(owner with {
+            AvaliableWidth = owner.AvaliableWidth - Margin.Left - Margin.Right - (Properties.Decoration?.FrontOffset ?? 0)
+        });
 
     public virtual CaretPosition StartCaretPosition => new(0, altPosition: false);
     public virtual CaretPosition EndCaretPosition => new(Math.Max(0, CodePointLength - 2), altPosition: false);
-    public record struct PaintOptions(RectangleF ViewBounds, TextPaintOptions TextPaintOptions, IDocumentViewOwner? viewOwner);
+    public record struct PaintOptions(RectangleF ViewBounds, TextPaintOptions TextPaintOptions, IDocumentViewOwner? ViewOwner);
     /// <summary>
     /// Paint this paragraph
     /// </summary>
     /// <param name="canvas">The canvas to paint to</param>
     /// <param name="options">Paint options</param>
     public abstract void Paint(SKCanvas canvas, PaintOptions options);
+
+    public virtual void NotifyGoingOffscreen(PaintOptions options) {
+        Properties.Decoration?.NotifyGoingOffscreen(new(options.ViewOwner));
+    }
 
     // So protected members can access the method
     protected static IEnumerable<SubRunInfo> GetInteractingRuns(Paragraph para, TextRange selection)
@@ -198,6 +206,11 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     public abstract IReadOnlyList<StyleRunEx> GetStyles(int position, int length);
     public abstract void ApplyStyle(IStyle style, int position, int length);
     protected internal Document? Owner { get; private set; }
-    protected internal virtual void OnParagraphAdded(Document owner) { Owner = owner; }
-    protected internal virtual void OnParagraphRemoved(Document owner) { Owner = null; }
+    protected internal virtual void OnParagraphAdded(Document owner) {
+        Owner = owner;
+    }
+    protected internal virtual void OnParagraphRemoved(Document owner) {
+        Properties.Decoration?.RemovedFromLayout();
+        Owner = null;
+    }
 }

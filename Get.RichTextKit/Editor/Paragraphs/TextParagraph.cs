@@ -27,6 +27,7 @@ using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
 using Get.RichTextKit.Editor.DocumentView;
 using System.Diagnostics;
+using Get.RichTextKit.Editor.Paragraphs.Decoration;
 
 namespace Get.RichTextKit.Editor.Paragraphs;
 
@@ -43,24 +44,29 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     /// <summary>
     /// Constructs a new TextParagraph
     /// </summary>
-    public TextParagraph(IStyle style)
+    public TextParagraph(IStyle style) : this()
     {
         _textBlock = new TextBlock();
         _textBlock.AddText(Document.NewParagraphSeparator.ToString(), style);
     }
-    private TextParagraph(TextBlock tb)
+    private TextParagraph(TextBlock tb) : this()
     {
         _textBlock = tb;
     }
 
     // Create a new textblock by copying the content of another
-    public TextParagraph(TextParagraph source, int from, int length)
+    public TextParagraph(TextParagraph source, int from, int length) : this()
     {
         // Copy the text block
         _textBlock = source.TextBlock.Copy(from, length);
 
         // Copy styles
         SetStyleContinuingFrom(source);
+    }
+    public static Func<IParagraphDecoration>? GetTestDecoration;
+    private TextParagraph()
+    {
+        
     }
     bool LineNumberMode = false;
 
@@ -221,7 +227,7 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
 
         if (splitIndex == CodePointLength) return new TextParagraph(paraA.EndStyle);
 
-        var paraB = new TextParagraph(paraA.TextBlock.Copy(splitIndex, CodePointLength));
+        var paraB = new TextParagraph(paraA.TextBlock.Copy(splitIndex, CodePointLength)) { Properties = { Decoration = Properties.Decoration?.Clone() } };
         if (splitIndex != CodePointLength - 1)
             UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, splitIndex, TextBlock.Length - splitIndex - 1));
         return paraB;

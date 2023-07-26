@@ -34,18 +34,46 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     public override void Paint(SKCanvas canvas, PaintOptions options)
     {
         options = options with { TextPaintOptions = options.TextPaintOptions.Clone() };
-
+        string? decorationTypeIdentifer = null;
+        int repeatingCount = 0;
+        Dictionary<string, int> ghostNumbering = new();
         foreach (var para in Children)
         {
             var drawingPos = para.GlobalInfo.ContentPosition;
             drawingPos.X -= options.ViewBounds.X;
             drawingPos.Y -= options.ViewBounds.Y;
             para.DrawingContentPosition = drawingPos;
-            if (drawingPos.X + para.ContentWidth < 0) goto AfterPaint;
-            if (drawingPos.Y + para.ContentHeight < 0) goto AfterPaint;
-            if (drawingPos.X > options.ViewBounds.Right) goto AfterPaint;
-            if (drawingPos.Y > options.ViewBounds.Bottom) goto AfterPaint;
+            if (para.Properties.Decoration is not { } decoration2 || decoration2.CountMode is CountMode.ResetNumbering || decoration2.TypeIdentifier != decorationTypeIdentifer)
+            {
+                decorationTypeIdentifer = para.Properties.Decoration?.TypeIdentifier;
+                repeatingCount = 0;
+            }
+            else
+            {
+                if (decoration2.CountMode is not CountMode.ContinueNumbering)
+                    // We will do a +1 below for continue numbering, no need to do it now
+                    repeatingCount++;
+                ghostNumbering[decoration2.TypeIdentifier] = repeatingCount;
+            }
+            if (para.Properties.Decoration?.CountMode is CountMode.ContinueNumbering)
+            {
+                if (!ghostNumbering.TryGetValue(para.Properties.Decoration.TypeIdentifier, out var value))
+                    value = -1; // -1 + 1 = 0
+                repeatingCount = value + 1;
+            }
+            if (drawingPos.X + para.ContentWidth < 0) goto OffScreen;
+            if (drawingPos.Y + para.ContentHeight < 0) goto OffScreen;
+            if (drawingPos.X > options.ViewBounds.Right) goto OffScreen;
+            if (drawingPos.Y > options.ViewBounds.Bottom) goto OffScreen;
             para.Paint(canvas, options);
+            if (para.Properties.Decoration is { } decoration)
+            {
+                decoration.Paint(canvas, new DecorationPaintContext(options.ViewOwner, repeatingCount, new(drawingPos.X - para.Properties.Decoration.FrontOffset, drawingPos.Y, para.Properties.Decoration.FrontOffset, para.ContentHeight), options.TextPaintOptions));
+            }
+            goto AfterPaint;
+        OffScreen:
+            para.NotifyGoingOffscreen(options);
+            para.Properties.Decoration?.NotifyGoingOffscreen(new(options.ViewOwner));
         AfterPaint:
             if (options.TextPaintOptions.Selection is not null)
             {

@@ -41,7 +41,7 @@ public partial class VerticalParagraph : PanelParagraph
             child.ParentInfo = new(this, idx);
             child.Layout(parentInfo);
             child.LocalInfo = new(
-                ContentPosition: OffsetMargin(new(0, YOffset), child.Margin),
+                ContentPosition: OffsetMargin(new(child.Properties.Decoration?.FrontOffset ?? 0, YOffset), child.Margin),
                 CodePointIndex: cpiOffset,
                 DisplayLineIndex: displayLineOffset,
                 LineIndex: lineOffset

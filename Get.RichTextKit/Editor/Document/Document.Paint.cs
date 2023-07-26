@@ -47,7 +47,7 @@ public partial class Document
         rootParagraph.Paint(canvas, new() {
             ViewBounds = bounds,
             TextPaintOptions = options,
-            viewOwner = ownerView
+            ViewOwner = ownerView
         });
     }
 }

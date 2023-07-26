@@ -186,8 +186,8 @@ public readonly record struct SubRunInfo(ParentInfo ParentInfo, int Offset, int 
     public IParagraphCollection Parent => ParentInfo.Parent;
     public int Index => ParentInfo.Index;
     public bool Partial =>
-        Offset >= Paragraph.StartCaretPosition.CodePointIndex &&
-        Offset + Length >= Paragraph.EndCaretPosition.CodePointIndex;
+        Offset > Paragraph.StartCaretPosition.CodePointIndex ||
+        Offset + Length < Paragraph.EndCaretPosition.CodePointIndex;
 }
 public readonly record struct SubRunBFSInfo(SubRunInfo SubRunInfo, IEnumerable<SubRunBFSInfo> NextLevelInfo)
 {
