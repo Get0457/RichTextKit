@@ -1,10 +1,5 @@
 ﻿using Get.RichTextKit.Editor.Paragraphs.Panel;
 using Get.RichTextKit.Editor.Structs;
-using SkiaSharp;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Text;
 
 namespace Get.RichTextKit.Editor.Paragraphs;
 

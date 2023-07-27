@@ -59,8 +59,15 @@ public partial class DocumentViewController
     {
         var selection = DocumentView.Selection.Range;
         if (selection.Start == 0 && !selection.IsRange && !deleteFront)
-            // don't delete
+        {
+            DocumentView.OwnerDocument.Paragraphs.GlobalChildrenFromCodePointIndex(
+                selection.StartCaretPosition,
+                out _,
+                out _
+            ).DeleteFront(DocumentView.OwnerDocument.UndoManager);
+            // delete front or don't delete
             return;
+        }
         var status = DocumentView.OwnerDocument.Editor.ReplaceText(
             selection.IsRange ? selection : new(
                 selection.Start,

@@ -136,6 +136,16 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                 if (newRange.Maximum >= para.EndCaretPosition.CodePointIndex && delInfo.DeleteMode is DeleteModes.Backward)
                 {
                     Debug.Assert(idx + 1 < Children.Count);
+                    // If length = 1, before we attempt anything, we want to try notifying the paragraph first
+                    if (Math.Abs(delInfo.Range.Length) is <= 1)
+                    {
+                        if (doDelete ? Children[idx + 1].DeleteFront(UndoManager) : Children[idx + 1].CanDeleteFront())
+                        {
+                            // Cursor should be at the same position (the end position)
+                            requestedSelection = new(range.End);
+                            return true;
+                        }
+                    }
                     if (!Children[idx].CanJoinWith(Children[idx + 1]))
                     {
                         requestedSelection = new TextRange(
@@ -177,6 +187,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                 requestedSelection = range;
                 return true;
             }
+
 
             // Delete Last first
             // Also check if the length > 1, otherwise interactingRanges[^1] == interactingRanges[0]
