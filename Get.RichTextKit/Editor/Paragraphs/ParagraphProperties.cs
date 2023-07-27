@@ -12,7 +12,7 @@ public class ParagraphProperties
         another.Decoration = Decoration.Clone();
     }
 }
-public record struct DecorationPaintContext(IDocumentViewOwner ViewOwner, int RepeatingCount, RectangleF AvaliableSpace, TextPaintOptions TextPaintOptions);
+public record struct DecorationPaintContext(IDocumentViewOwner ViewOwner, int RepeatingCount, RectangleF AvaliableSpace, TextPaintOptions TextPaintOptions, Paragraph OwnerParagraph);
 public record struct DecorationOffscreenNotifyContext(IDocumentViewOwner ViewOwner);
 public enum CountMode : byte
 {

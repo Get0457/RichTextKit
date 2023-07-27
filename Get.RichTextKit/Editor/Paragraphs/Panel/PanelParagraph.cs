@@ -69,7 +69,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
             para.Paint(canvas, options);
             if (para.Properties.Decoration is { } decoration)
             {
-                decoration.Paint(canvas, new DecorationPaintContext(options.ViewOwner, repeatingCount, new(drawingPos.X - para.Properties.Decoration.FrontOffset, drawingPos.Y, para.Properties.Decoration.FrontOffset, para.ContentHeight), options.TextPaintOptions));
+                decoration.Paint(canvas, new DecorationPaintContext(options.ViewOwner, repeatingCount, new(drawingPos.X - para.Properties.Decoration.FrontOffset, drawingPos.Y, para.Properties.Decoration.FrontOffset, para.ContentHeight), options.TextPaintOptions, para));
             }
             goto AfterPaint;
         OffScreen:

@@ -30,7 +30,7 @@ public class NumberListDecoration : IParagraphDecoration
     {
         var centerPos = new PointF(context.AvaliableSpace.Right - 40, (context.AvaliableSpace.Top + context.AvaliableSpace.Bottom) / 2);
         TextBlock tb = new();
-        tb.AddText($"{context.RepeatingCount + 1}.", new Style() { TextColor = Color ?? context.TextPaintOptions.TextDefaultColor });
+        tb.AddText($"{context.RepeatingCount + 1}.", new CopyStyle(context.OwnerParagraph.EndStyle) { TextColor = Color ?? context.TextPaintOptions.TextDefaultColor });
         
         tb.Paint(canvas, new SKPoint(centerPos.X - tb.MeasuredWidth / 2, centerPos.Y - tb.MeasuredHeight / 2));
     }
