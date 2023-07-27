@@ -115,6 +115,10 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
             {
                 foreach (var sr2 in childEnumerable)
                     yield return sr2;
+                if (subRun.Paragraph == this)
+                {
+                    yield return new(subRun, Enumerable.Empty<SubRunBFSInfo>());
+                }
             }
             else
             {
