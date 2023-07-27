@@ -27,7 +27,6 @@ using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
 using Get.RichTextKit.Editor.DocumentView;
 using System.Diagnostics;
-using Get.RichTextKit.Editor.Paragraphs.Decoration;
 
 namespace Get.RichTextKit.Editor.Paragraphs;
 
@@ -44,29 +43,24 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     /// <summary>
     /// Constructs a new TextParagraph
     /// </summary>
-    public TextParagraph(IStyle style) : this()
+    public TextParagraph(IStyle style)
     {
         _textBlock = new TextBlock();
         _textBlock.AddText(Document.NewParagraphSeparator.ToString(), style);
     }
-    private TextParagraph(TextBlock tb) : this()
+    private TextParagraph(TextBlock tb)
     {
         _textBlock = tb;
     }
 
     // Create a new textblock by copying the content of another
-    public TextParagraph(TextParagraph source, int from, int length) : this()
+    public TextParagraph(TextParagraph source, int from, int length)
     {
         // Copy the text block
         _textBlock = source.TextBlock.Copy(from, length);
 
         // Copy styles
         SetStyleContinuingFrom(source);
-    }
-    public static Func<IParagraphDecoration>? GetTestDecoration;
-    private TextParagraph()
-    {
-        
     }
     bool LineNumberMode = false;
 
@@ -136,6 +130,8 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
         bool isLastLine = line + 1 == _textBlock.LineIndicies.Count;
         return new LineInfo(
             Line: line,
+            Y: _textBlock.Lines[line].YCoord,
+            Height: _textBlock.Lines[line].Height,
             Start: new(_textBlock.LineIndicies[line]),
             End: new(
                 isLastLine ? _textBlock.Length - 1 : _textBlock.LineIndicies[line + 1],

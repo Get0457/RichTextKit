@@ -10,6 +10,7 @@ using HarfBuzzSharp;
 using System.Reflection;
 using Get.RichTextKit.Styles;
 using System.Diagnostics;
+using Get.RichTextKit.Editor.Paragraphs.Properties.Decoration;
 
 namespace Get.RichTextKit.Editor.Paragraphs.Panel;
 
@@ -47,20 +48,26 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
             {
                 decorationTypeIdentifer = para.Properties.Decoration?.TypeIdentifier;
                 repeatingCount = 0;
+                if (decorationTypeIdentifer is not null)
+                {
+                    if (ghostNumbering.ContainsKey(decorationTypeIdentifer))
+                    {
+                        if (para.Properties.Decoration?.CountMode is CountMode.ContinueNumbering)
+                        {
+                            repeatingCount = ghostNumbering[para.Properties.Decoration.TypeIdentifier];
+                            ghostNumbering[para.Properties.Decoration.TypeIdentifier] = repeatingCount + 1;
+                        }
+                    }
+                    else
+                    {
+                        ghostNumbering[decorationTypeIdentifer] = 1;
+                    }
+                }
             }
             else
             {
-                if (decoration2.CountMode is not CountMode.ContinueNumbering)
-                    // We will do a +1 below for continue numbering, no need to do it now
-                    repeatingCount++;
-                ghostNumbering[decoration2.TypeIdentifier] = repeatingCount;
-            }
-            if (para.Properties.Decoration?.CountMode is CountMode.ContinueNumbering)
-            {
-                if (!ghostNumbering.TryGetValue(para.Properties.Decoration.TypeIdentifier, out var value))
-                    value = -1; // -1 + 1 = 0
-                repeatingCount = value + 1;
-                ghostNumbering[para.Properties.Decoration.TypeIdentifier] = repeatingCount;
+                repeatingCount++;
+                ghostNumbering[decoration2.TypeIdentifier] = repeatingCount + 1;
             }
             if (drawingPos.X + para.ContentWidth < 0) goto OffScreen;
             if (drawingPos.Y + para.ContentHeight < 0) goto OffScreen;
@@ -291,7 +298,8 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                         Children[paraIdx - 1].LocalInfo.OffsetFromThis(ref selection);
                         newSelection = selection;
                         return NavigationStatus.Success;
-                    } else
+                    }
+                    else
                     {
                         return VerticalNavigateUsingLineInfo(selection, snap, direction, keepSelection, ref ghostXCoord, out newSelection);
                     }

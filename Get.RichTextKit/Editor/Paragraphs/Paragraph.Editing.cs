@@ -1,4 +1,5 @@
 ﻿using Get.RichTextKit.Editor.DocumentView;
+using Get.RichTextKit.Editor.Paragraphs.Properties.Decoration;
 using Get.RichTextKit.Editor.Structs;
 using Get.RichTextKit.Utils;
 

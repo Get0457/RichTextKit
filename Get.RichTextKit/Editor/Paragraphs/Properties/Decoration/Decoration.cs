@@ -2,16 +2,8 @@
 using SkiaSharp;
 using System.Drawing;
 
-namespace Get.RichTextKit.Editor.Paragraphs;
+namespace Get.RichTextKit.Editor.Paragraphs.Properties.Decoration;
 
-public class ParagraphProperties
-{
-    public IParagraphDecoration Decoration { get; set; }
-    public void CopyTo(ParagraphProperties another)
-    {
-        another.Decoration = Decoration.Clone();
-    }
-}
 public record struct DecorationPaintContext(IDocumentViewOwner ViewOwner, int RepeatingCount, RectangleF AvaliableSpace, TextPaintOptions TextPaintOptions, Paragraph OwnerParagraph);
 public record struct DecorationOffscreenNotifyContext(IDocumentViewOwner ViewOwner);
 public enum CountMode : byte
@@ -20,11 +12,18 @@ public enum CountMode : byte
     ContinueNumbering,
     ResetNumbering
 }
+public enum VerticalAlignment : byte
+{
+    Top = default,
+    Center,
+    Bottom
+}
 public interface IParagraphDecoration
 {
     string TypeIdentifier { get; }
     float FrontOffset { get; }
     CountMode CountMode { get; }
+    VerticalAlignment VerticalAlignment { get; set; }
     void Paint(SKCanvas canvas, DecorationPaintContext context);
     void NotifyGoingOffscreen(DecorationOffscreenNotifyContext context);
     void RemovedFromLayout();

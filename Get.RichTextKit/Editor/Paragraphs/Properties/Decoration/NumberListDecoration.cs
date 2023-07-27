@@ -1,7 +1,9 @@
-﻿using SkiaSharp;
+﻿using Get.RichTextKit.Editor.Paragraphs.Panel;
+using Get.RichTextKit.Editor.Structs;
+using SkiaSharp;
 using System.Drawing;
 
-namespace Get.RichTextKit.Editor.Paragraphs.Decoration;
+namespace Get.RichTextKit.Editor.Paragraphs.Properties.Decoration;
 
 public class NumberListDecoration : IParagraphDecoration
 {
@@ -11,6 +13,7 @@ public class NumberListDecoration : IParagraphDecoration
     public string TypeIdentifier => "NumberList";
 
     public CountMode CountMode { get; set; } = CountMode.Default;
+    public VerticalAlignment VerticalAlignment { get; set; }
 
     public IParagraphDecoration Clone()
     {
@@ -28,7 +31,14 @@ public class NumberListDecoration : IParagraphDecoration
 
     public void Paint(SKCanvas canvas, DecorationPaintContext context)
     {
-        var centerPos = new PointF(context.AvaliableSpace.Right - 40, (context.AvaliableSpace.Top + context.AvaliableSpace.Bottom) / 2);
+        LineInfo l;
+        var centerPos = new PointF(context.AvaliableSpace.Right - 40, VerticalAlignment switch
+        {
+            VerticalAlignment.Top => (context.AvaliableSpace.Top + context.OwnerParagraph.GetLineInfo(0).Assign(out l).Y + l.Height / 2),
+            VerticalAlignment.Center => (context.AvaliableSpace.Top + context.AvaliableSpace.Bottom) / 2,
+            VerticalAlignment.Bottom => (context.AvaliableSpace.Top + context.OwnerParagraph.GetLineInfo(^1).Assign(out l).Y + l.Height / 2),
+            _ => throw new ArgumentOutOfRangeException()
+        });
         TextBlock tb = new();
         tb.AddText($"{context.RepeatingCount + 1}.", new CopyStyle(context.OwnerParagraph.EndStyle) { TextColor = Color ?? context.TextPaintOptions.TextDefaultColor });
         
