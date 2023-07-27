@@ -60,6 +60,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                 if (!ghostNumbering.TryGetValue(para.Properties.Decoration.TypeIdentifier, out var value))
                     value = -1; // -1 + 1 = 0
                 repeatingCount = value + 1;
+                ghostNumbering[para.Properties.Decoration.TypeIdentifier] = repeatingCount;
             }
             if (drawingPos.X + para.ContentWidth < 0) goto OffScreen;
             if (drawingPos.Y + para.ContentHeight < 0) goto OffScreen;
