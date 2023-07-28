@@ -107,5 +107,9 @@ public partial class Document
     {
         UndoManager.Do(new UndoParagraphSettingGlobal<T>(range, newValue, Getter, Setter));
     }
+    public void ApplyParagraphSettingViaFactory<T>(TextRange range, Func<T> factory, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter)
+    {
+        UndoManager.Do(new UndoParagraphSettingGlobal<T>(range, factory, Getter, Setter));
+    }
 
 }

@@ -14,15 +14,19 @@ public class UndoParagraphSettingGlobal<T> : UndoUnit<Document, DocumentViewUpda
     TextRange range;
     Func<Paragraph, T> Getter;
     Func<Paragraph, T, bool> Setter;
-    T NewValue;
+    Func<T> NewValueFactory;
     public UndoParagraphSettingGlobal(TextRange range, T newValue, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter)
+        : this(range, () => newValue, Getter, Setter)
+    { }
+    public UndoParagraphSettingGlobal(TextRange range, Func<T> newValue, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter)
     {
         this.range = range.Normalized;
         this.Getter = Getter;
         this.Setter = Setter;
-        NewValue = newValue;
+        NewValueFactory = newValue;
     }
     List<(Paragraph, T)>? SavedValue;
+    List<(Paragraph, T)>? SavedValueRedo;
     public override void Do(Document context)
     {
         SavedValue = new();
@@ -40,13 +44,21 @@ public class UndoParagraphSettingGlobal<T> : UndoUnit<Document, DocumentViewUpda
     }
     public override void Redo(Document context)
     {
-        base.Redo(context);
+        SavedValue = new();
+        foreach (var (para, val) in SavedValueRedo!)
+        {
+            SavedValue.Add((para, Getter(para)));
+            Setter.Invoke(para, val);
+        }
+        SavedValueRedo!.Clear();
+        SavedValueRedo = null;
         NotifyInfo(new(NewSelection: range));
+        context.RequestRedraw();
     }
     bool ConfirmSetStyle(Paragraph para)
     {
         var val = Getter(para);
-        if (Setter(para, NewValue))
+        if (Setter(para, NewValueFactory()))
         {
             SavedValue.Add((para, val));
             return true;
@@ -56,8 +68,10 @@ public class UndoParagraphSettingGlobal<T> : UndoUnit<Document, DocumentViewUpda
 
     public override void Undo(Document context)
     {
+        SavedValueRedo = new();
         foreach (var (para, val) in SavedValue!)
         {
+            SavedValueRedo.Add((para, Getter(para)));
             Setter.Invoke(para, val);
         }
         SavedValue!.Clear();

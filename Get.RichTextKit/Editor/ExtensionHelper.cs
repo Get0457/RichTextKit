@@ -13,7 +13,7 @@ static class ExtensionHelper
     /// <returns>Enumerable containing all sequence from start to end</returns>
     public static IEnumerator<int> GetEnumerator(this Range range)
     {
-        foreach (var a in GetEnumerable(range)) yield return a;
+        return GetEnumerable(range).GetEnumerator();
     }
     /// <summary>
     /// Create Enumerator from Range, for `foreach` syntax sugar
@@ -79,10 +79,13 @@ static class ExtensionHelper
     {
         if (range.End.IsFromEnd) throw new ArgumentException("Range.End cannot start from the end value");
         if (range.Start.IsFromEnd) range = (range.End.Value - range.Start.Value)..range.End.Value;
-        for (int i = range.Start.Value; i < range.End.Value; i++)
-        {
-            yield return i;
-        }
+        //for (int i = range.Start.Value; i < range.End.Value; i++)
+        //{
+        //    yield return i;
+        //}
+        if (range.Start.Value < range.End.Value)
+            return Enumerable.Range(range.Start.Value, range.End.Value - range.Start.Value);
+        return Enumerable.Empty<int>();
     }
 
     public static IEnumerable<(int Index, T Item)> WithIndex<T>(this IEnumerable<T> item)

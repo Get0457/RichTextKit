@@ -18,6 +18,10 @@ public enum VerticalAlignment : byte
     Center,
     Bottom
 }
+public interface IParagraphDecorationCountModifiable : IParagraphDecoration
+{
+    new CountMode CountMode { get; set; }
+}
 public interface IParagraphDecoration
 {
     string TypeIdentifier { get; }

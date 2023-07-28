@@ -143,4 +143,7 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
 
     public override void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter)
         => DocumentView.OwnerDocument.ApplyParagraphSetting(Range, newValue, Getter, Setter);
+
+    public override void ApplyParagraphSettingViaFactory<T>(Func<T> newValueFactory, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter)
+        => DocumentView.OwnerDocument.ApplyParagraphSettingViaFactory(Range, newValueFactory, Getter, Setter);
 }

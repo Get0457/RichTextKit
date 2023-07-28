@@ -5,7 +5,7 @@ using System.Drawing;
 
 namespace Get.RichTextKit.Editor.Paragraphs.Properties.Decoration;
 
-public class NumberListDecoration : IParagraphDecoration
+public class NumberListDecoration : IParagraphDecoration, IParagraphDecorationCountModifiable
 {
     public SKColor? Color { get; set; }
     public float FrontOffset => 90;

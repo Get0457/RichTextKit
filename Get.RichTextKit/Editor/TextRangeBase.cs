@@ -5,11 +5,16 @@ using System.ComponentModel;
 using Get.RichTextKit.Editor.Paragraphs;
 using System;
 using Get.RichTextKit.Styles;
+using Get.RichTextKit.Editor.Paragraphs.Properties.Decoration;
 
 namespace Get.RichTextKit.Editor;
 
 public abstract class TextRangeBase
 {
+    public TextRangeBase()
+    {
+        ParagraphSettings = new(this);
+    }
     public const int FontWeightBold = 700;
     public const int FontWeightNormal = 400;
     protected virtual void OnChanged(string FormatName) { }
@@ -18,6 +23,7 @@ public abstract class TextRangeBase
     public abstract bool GetStyleValue<T>(Func<IStyle, T> statusChecker, [NotNullWhen(true)] out T? value);
     public abstract bool GetParagraphSetting<T>(Func<Paragraph, T?> statusChecker, [NotNullWhen(true)] out T? value);
     public abstract void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter);
+    public abstract void ApplyParagraphSettingViaFactory<T>(Func<T> newValueFactory, Func<Paragraph, T> Getter, Func<Paragraph, T, bool> Setter);
     public void ApplyParagraphSetting<T>(T newValue, Func<Paragraph, T> Getter, Action<Paragraph, T> Setter)
         => ApplyParagraphSetting(newValue, Getter, (p, x) =>
         {
@@ -202,6 +208,184 @@ public abstract class TextRangeBase
                 ApplyStyle(x => new CopyStyle(x) { BackgroundColor = value.Value });
             }
             OnChanged(nameof(BackgroundColor));
+        }
+    }
+    public ParagraphSetting ParagraphSettings { get; }
+    public class ParagraphSetting
+    {
+        readonly TextRangeBase TextRangeBase;
+        internal ParagraphSetting(TextRangeBase trb)
+        {
+            TextRangeBase = trb;
+        }
+        public TextAlignment? TextAlignment
+        {
+            get
+            {
+                if (TextRangeBase.GetParagraphSetting<TextAlignment?>(x => x is IAlignableParagraph a ? a.Alignment : null, out var setting))
+                {
+                    return setting;
+                }
+                return null;
+            }
+            set
+            {
+                if (value is not null)
+                {
+                    TextRangeBase.ApplyParagraphSetting(value.Value, AlignmentGetter, AlignmentSetter);
+                }
+                TextRangeBase.OnChanged(nameof(TextAlignment));
+            }
+        }
+        public StyleStatus HasBulletListDecoration
+        {
+            get => HasParagraphDecorationOfType<BulletDecoration>();
+            set
+            {
+                if (value is StyleStatus.On)
+                {
+                    SetParagraphDecorationToType<BulletDecoration>();
+                }
+                else if (value is StyleStatus.Off)
+                {
+                    RemoveParagraphDecorationToType<BulletDecoration>();
+                }
+            }
+        }
+        public StyleStatus HasNumberListDecoration
+        {
+            get => HasParagraphDecorationOfType<NumberListDecoration>();
+            set
+            {
+                if (value is StyleStatus.On)
+                {
+                    SetParagraphDecorationToType<NumberListDecoration>();
+                }
+                else if (value is StyleStatus.Off)
+                {
+                    RemoveParagraphDecorationToType<NumberListDecoration>();
+                }
+            }
+        }
+        public StyleStatus HasParagraphDecorationOfType<T>() where T : IParagraphDecoration
+        {
+            if (TextRangeBase.GetParagraphSetting(x => x.Properties.Decoration is T, out var output))
+                return output ? StyleStatus.On : StyleStatus.Off;
+            return StyleStatus.Undefined;
+        }
+        public void SetParagraphDecorationToType<T>() where T : IParagraphDecoration, new()
+        {
+            TextRangeBase.ApplyParagraphSetting(new T(), static x => x.Properties.Decoration, static (x, y) =>
+            {
+                if (y is T && x.Properties.Decoration is T)
+                    return false;
+                var oldDeco = x.Properties.Decoration;
+                x.Properties.Decoration = y;
+                oldDeco?.RemovedFromLayout();
+                return true;
+            });
+        }
+        public void SetParagraphDecorationToType<T>(StyleStatus status) where T : IParagraphDecoration, new()
+        {
+            if (status is StyleStatus.On)
+            {
+                SetParagraphDecorationToType<T>();
+            }
+            else if (status is StyleStatus.Off)
+            {
+                RemoveParagraphDecorationToType<T>();
+            }
+        }
+        public VerticalAlignment? DecorationVerticalAlignment
+        {
+            get
+            {
+                if (TextRangeBase.GetParagraphSetting(x => x.Properties.Decoration?.VerticalAlignment, out var output))
+                    return output;
+                return null;
+            }
+            set
+            {
+                if (value is not null)
+                    TextRangeBase.ApplyParagraphSetting(value.Value, static x => x.Properties.Decoration?.VerticalAlignment, static (x, y) =>
+                    {
+                        var deco = x.Properties.Decoration;
+                        if (deco is not null && y is not null && deco.VerticalAlignment != y)
+                        {
+                            deco.VerticalAlignment = y.Value;
+                            return true;
+                        }
+                        return false;
+                    });
+            }
+        }
+        public CountMode? DecorationCountMode
+        {
+            get
+            {
+                if (TextRangeBase.GetParagraphSetting(x => x.Properties.Decoration?.CountMode, out var output))
+                    return output;
+                return null;
+            }
+            set
+            {
+                if (value is not null)
+                    TextRangeBase.ApplyParagraphSetting(value.Value, static x => x.Properties.Decoration?.CountMode, static (x, y) =>
+                    {
+                        if (y is not null && x.Properties.Decoration is IParagraphDecorationCountModifiable deco && deco.CountMode != y)
+                        {
+                            deco.CountMode = y.Value;
+                            return true;
+                        }
+                        return false;
+                    });
+            }
+        }
+        public void SetParagraphDecorationToType<T>(StyleStatus status, Func<T> Factory) where T : IParagraphDecoration
+        {
+            if (status is StyleStatus.On)
+            {
+                SetParagraphDecorationToType<T>(Factory);
+            }
+            else if (status is StyleStatus.Off)
+            {
+                RemoveParagraphDecorationToType<T>();
+            }
+        }
+        public void SetParagraphDecorationToType<T>(Func<T> Factory) where T : IParagraphDecoration
+        {
+            TextRangeBase.ApplyParagraphSettingViaFactory<IParagraphDecoration>(() => Factory(), static x => x.Properties.Decoration, static (x, y) =>
+            {
+                if (y is T && x.Properties.Decoration is T)
+                    return false;
+                var oldDeco = x.Properties.Decoration;
+                x.Properties.Decoration = y;
+                oldDeco?.RemovedFromLayout();
+                return true;
+            });
+        }
+        public void RemoveParagraphDecorationToType<T>() where T : IParagraphDecoration
+        {
+            TextRangeBase.ApplyParagraphSetting(null, static x => x.Properties.Decoration, static (x, y) =>
+            {
+                if (x.Properties.Decoration is not T)
+                    return false;
+                var oldDeco = x.Properties.Decoration;
+                x.Properties.Decoration = y;
+                oldDeco?.RemovedFromLayout();
+                return true;
+            });
+        }
+        static TextAlignment AlignmentGetter(Paragraph p)
+            => p is IAlignableParagraph ap ? ap.Alignment : default;
+        static bool AlignmentSetter(Paragraph p, TextAlignment x)
+        {
+            if (p is IAlignableParagraph ap)
+            {
+                ap.Alignment = x;
+                return true;
+            }
+            return false;
         }
     }
 }
