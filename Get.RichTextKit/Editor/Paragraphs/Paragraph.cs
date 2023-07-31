@@ -168,8 +168,8 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     /// Queries the width of this paragraph
     /// </summary>
     public float ContentWidth => ContentWidthOverride + Margin.Left + Margin.Right;
-    protected internal LayoutInfo GlobalInfo { get; internal set; }
-    protected internal LayoutInfo LocalInfo { get; internal set; }
+    public LayoutInfo GlobalInfo { get; internal set; }
+    public LayoutInfo LocalInfo { get; internal set; }
 
     /// <summary>
     /// The coordinate of this paragraph's content (ie: after applying margin)

@@ -22,7 +22,7 @@ partial class Paragraph
     /// This line index of this paragraph relative to the start
     /// </param>
     /// <param name="DisplayLineIndex"></param>
-    protected internal readonly record struct LayoutInfo
+    public readonly record struct LayoutInfo
     (PointF ContentPosition, int CodePointIndex, int LineIndex, int DisplayLineIndex)
     {
         public LayoutInfo OffsetToGlobal(LayoutInfo parentGlobalInfo)
@@ -166,6 +166,16 @@ partial class Paragraph
         public PointF OffsetToThis(PointF pt)
         {
             OffsetToThis(ref pt);
+            return pt;
+        }
+        public void OffsetFromThis(ref PointF pt)
+        {
+            pt.X += ContentPosition.X;
+            pt.Y += ContentPosition.Y;
+        }
+        public PointF OffsetFromThis(PointF pt)
+        {
+            OffsetFromThis(ref pt);
             return pt;
         }
         public void OffsetXToThis(ref float x)

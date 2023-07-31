@@ -32,17 +32,11 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     internal IStyle? CurrentPositionStyle { get; private set; }
     public IStyle CurrentCaretStyle => CurrentPositionStyle ?? DocumentView.OwnerDocument.GetStyleAtPosition(Range.EndCaretPosition);
     bool wasNotSelection = false;
-    public IParagraphPanel[]? CurrentCaretPositionParent { get; private set; }
-    public Paragraph? CurrentCaretPositionParagraph { get; private set; }
     void OnRangeChanged()
     {
         if (!Range.IsRange)
         {
             CurrentPositionStyle = DocumentView.OwnerDocument.GetStyleAtPosition(Range.EndCaretPosition);
-            CurrentCaretPositionParagraph = DocumentView.OwnerDocument.Paragraphs.GlobalChildrenFromCodePointIndex(
-                Range.EndCaretPosition, out var a, out _
-            );
-            CurrentCaretPositionParent = a;
             if (Range.AltPosition is true)
             {
                 var thestr = DocumentView.OwnerDocument.GetText(new(Range.Start - 1, Range.Start)).ToString();
@@ -60,7 +54,6 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
         else
         {
             CurrentPositionStyle = null;
-            CurrentCaretPositionParent = null;
             var selectInfo = DocumentView.OwnerDocument.Editor.GetSelectionInfo(Range);
             DocumentView.LayoutInfo.OffsetToThis(ref selectInfo);
             _Range = selectInfo.FinalSelection;
@@ -137,7 +130,39 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
         value = statusChecker(CurrentPositionStyle);
         return value is not null;
     }
-
+    /// <summary>
+    /// Get Currently Interacting Paragraph.
+    /// If the selection spans multiple paragraphs, it will not be included.
+    /// The enumerable returns the most inner paragraph.
+    /// </summary>
+    /// <remarks>
+    /// The caller should only go to the next item if there is no handler for the current
+    /// paragraph. When a paragraph is handled, the enumerable should not ask for the next value and stop immedietly.
+    /// </remarks>
+    public IEnumerable<Paragraph> CurrentlyInteractingParagraph
+    {
+        get
+        {
+            var info = DocumentView.OwnerDocument.Paragraphs.GetBFSInteractingRunsRecursive(Range).ToArray();
+            if (info.Length is 1)
+            {
+                yield return info[0].SubRunInfo.Paragraph;
+            }
+            if (info.Length > 0)
+            {
+                var parent = info[0].SubRunInfo.ParentInfo.Parent;
+                while (true)
+                {
+                    if (parent is Paragraph para)
+                    {
+                        yield return para;
+                        parent = para.ParentInfo.Parent;
+                    }
+                    else yield break;
+                }
+            }
+        }
+    }
     public override bool GetParagraphSetting<T>(Func<Paragraph, T?> statusChecker, [NotNullWhen(true)] out T? value) where T : default
         => DocumentView.OwnerDocument.GetParagraphSetting(Range, statusChecker, out value);
 
