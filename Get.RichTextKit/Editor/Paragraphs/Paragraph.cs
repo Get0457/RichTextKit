@@ -203,7 +203,7 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
     public abstract IStyle GetStyleAtPosition(CaretPosition position);
     public abstract IReadOnlyList<StyleRunEx> GetStyles(int position, int length);
     public abstract void ApplyStyle(IStyle style, int position, int length);
-    protected internal Document? Owner { get; private set; }
+    public Document? Owner { get; private set; }
     protected internal virtual void OnParagraphAdded(Document owner) {
         Owner = owner;
     }

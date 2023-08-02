@@ -1,12 +1,8 @@
-﻿using Get.RichTextKit.Utils;
-using Get.RichTextKit;
-using System.Diagnostics.CodeAnalysis;
-using Get.RichTextKit.Editor;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.ComponentModel;
 using Get.EasyCSharp;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Styles;
-using Get.RichTextKit.Editor.Paragraphs.Panel;
 using Get.RichTextKit.Editor.Structs;
 
 namespace Get.RichTextKit.Editor.DocumentView;
@@ -80,8 +76,7 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     void UpdateCaretInfoAndNotify()
     {
         UpdateCaretInfo();
-        PropertyChanged?.Invoke(this, new(nameof(StartCaretInfo)));
-        PropertyChanged?.Invoke(this, new(nameof(EndCaretInfo)));
+        PropertyChanged?.Invoke(this, new(null));
     }
     void UpdateCaretInfo()
     {
@@ -143,6 +138,7 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     {
         get
         {
+            DocumentView.OwnerDocument.Layout.EnsureValid();
             var info = DocumentView.OwnerDocument.Paragraphs.GetBFSInteractingRunsRecursive(Range).ToArray();
             if (info.Length is 1)
             {

@@ -21,6 +21,7 @@ using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Editor.Paragraphs.Panel;
 using System.Diagnostics;
 using Get.RichTextKit.Editor.Structs;
+using Get.RichTextKit.Editor.UndoUnits;
 
 namespace Get.RichTextKit.Editor;
 
@@ -50,6 +51,10 @@ public class DocumentParagraphs : IParagraphCollection
                 p = newParent;
             }
             return (Paragraph)p;
+        }
+        set
+        {
+            Document.UndoManager.Do(new UndoReplaceParagraph(index, value));
         }
     }
     public Paragraph GetParentAndChild(ParagraphIndex index, out IParagraphCollection parent, out int paraIndex)

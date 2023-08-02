@@ -9,7 +9,7 @@ using System.Diagnostics;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
 
-class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
+public class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
 {
     public UndoDeleteParagraph(ParagraphIndex paraIndex)
     {
@@ -25,6 +25,7 @@ class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
             _parent.Paragraphs[i].ParentInfo = _parent.Paragraphs[i].ParentInfo with { Index = i };
         }
         _paragraph.OnParagraphRemoved(context);
+        context.Layout.Invalidate();
     }
     public override void Redo(Document context)
     {
@@ -44,6 +45,7 @@ class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
         _paragraph.OnParagraphAdded(context);
         context.Layout.InvalidateAndValid();
         NotifyInfo(new(NewSelection: new(_paragraph.GlobalInfo.CodePointIndex + _paragraph.CodePointLength)));
+        context.Layout.Invalidate();
     }
 
     ParagraphIndex _paraIndex;

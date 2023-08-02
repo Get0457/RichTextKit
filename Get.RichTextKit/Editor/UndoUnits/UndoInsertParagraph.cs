@@ -8,7 +8,7 @@ using Get.RichTextKit.Utils;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
 
-class UndoInsertParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
+public class UndoInsertParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
 {
     IParagraphCollection _parent;
     public UndoInsertParagraph(IParagraphCollection parent, int index, Paragraph paragraph)
@@ -26,6 +26,7 @@ class UndoInsertParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
             _parent.Paragraphs[i].ParentInfo = _parent.Paragraphs[i].ParentInfo with { Index = i };
         }
         _paragraph.OnParagraphAdded(context);
+        context.Layout.Invalidate();
     }
     public override void Redo(Document context)
     {
