@@ -326,7 +326,37 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         return output;
     }
     public override TextRange GetSelectionRange(CaretPosition position, ParagraphSelectionKind kind)
-        => LocalChildrenFromCodePointIndex(position, out var idx).GetSelectionRange(
+    {
+        var child = LocalChildrenFromCodePointIndex(position, out var idx);
+        var range = child.GetSelectionRange(
             new(idx, position.AltPosition), kind
         );
+
+        child.LocalInfo.OffsetFromThis(ref range);
+        return range;
+    }
+    protected internal override void OnParagraphAdded(Document owner)
+    {
+        base.OnParagraphAdded(owner);
+        foreach (var para in Children)
+        {
+            para.OnParagraphAdded(owner);
+        }
+    }
+    protected internal override void OnParagraphRemoved(Document owner)
+    {
+        base.OnParagraphRemoved(owner);
+        foreach (var para in Children)
+        {
+            para.OnParagraphRemoved(owner);
+        }
+    }
+    public override void NotifyGoingOffscreen(PaintOptions options)
+    {
+        base.NotifyGoingOffscreen(options);
+        foreach (var para in Children)
+        {
+            para.NotifyGoingOffscreen(options);
+        }
+    }
 }

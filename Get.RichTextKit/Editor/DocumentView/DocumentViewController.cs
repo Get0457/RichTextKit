@@ -2,7 +2,6 @@
 using Get.RichTextKit.Editor.UndoUnits;
 using System.Drawing;
 using Get.RichTextKit.Styles;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Get.RichTextKit.Editor.DocumentView;
 

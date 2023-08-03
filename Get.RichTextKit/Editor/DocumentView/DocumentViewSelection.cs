@@ -119,6 +119,7 @@ public partial class DocumentViewSelection : TextRangeBase, INotifyPropertyChang
     }
     public override bool GetStyleValue<T>(Func<IStyle, T> statusChecker, [NotNullWhen(true)] out T? value) where T : default
     {
+        DocumentView.OwnerDocument.Layout.EnsureValid();
         if (Range.IsRange || CurrentPositionStyle is null)
             return DocumentView.OwnerDocument.GetStyleValue(Range, statusChecker, out value);
 

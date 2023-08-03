@@ -20,7 +20,9 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     {
         public static TableSelection FromRange(TableParagraph tableRef, TextRange range)
         {
-            range = range.Clamp(tableRef.EndCaretPosition.CodePointIndex);
+            //if (range.End > tableRef.EndCaretPosition.CodePointIndex && range.Start > tableRef.EndCaretPosition.CodePointIndex)
+            //    return new(tableRef, new(tableRef, 2, 2), new(tableRef, 2, 2));
+            range = range.Clamp(tableRef.CodePointLength);
             var idx1 = TableIndex.FromCaretPosition(tableRef, range.Start < 0 ? tableRef.StartCaretPosition : range.StartCaretPosition);
             var idx2 = TableIndex.FromCaretPosition(tableRef, range.End >= tableRef.CodePointLength ? tableRef.EndCaretPosition : range.EndCaretPosition);
             return new(tableRef, idx1, idx2);

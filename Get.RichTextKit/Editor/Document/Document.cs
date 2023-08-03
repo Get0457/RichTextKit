@@ -36,6 +36,7 @@ public partial class Document
     public Document(IStyle DefaultStyle)
     {
         rootParagraph = new(DefaultStyle);
+        rootParagraph.OnParagraphAdded(this);
         // Create paragraph list
         UndoManager = new(this);
         Paragraphs = new(this);

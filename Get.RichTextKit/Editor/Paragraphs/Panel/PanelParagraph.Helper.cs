@@ -108,7 +108,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
             while (obj is IParagraphPanel panel)
             {
                 yield return panel;
-                paragraphIndex = PanelParagraph.LocalChildrenFromCodePointIndexAsIndex(new ReadOnlyListWrapper<Paragraph>(panel.Children), position, out codePointindexInParagraph2);
+                paragraphIndex = LocalChildrenFromCodePointIndexAsIndex(new ReadOnlyListWrapper<Paragraph>(panel.Children), position, out codePointindexInParagraph2);
                 position.CodePointIndex = codePointindexInParagraph2;
                 obj = panel.Children[paragraphIndex];
             }
