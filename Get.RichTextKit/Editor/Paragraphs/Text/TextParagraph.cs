@@ -19,10 +19,7 @@
 using Get.RichTextKit.Editor.Structs;
 using Get.RichTextKit.Editor.UndoUnits;
 using SkiaSharp;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Xml.Linq;
-using Get.RichTextKit;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
 using Get.RichTextKit.Editor.DocumentView;
@@ -34,7 +31,7 @@ namespace Get.RichTextKit.Editor.Paragraphs;
 /// Implements a text paragraph
 /// </summary>
 [DebuggerDisplay("{TextBlock}")]
-public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
+public partial class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
 {
     const int NumberLineOffset = 60;
     const int NumberRightMargin = 10;
@@ -169,44 +166,7 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
     readonly TextBlock _textBlock;
 
 
-    public override bool CanDeletePartial(DeleteInfo delInfo, out TextRange requestedSelection)
-    {
-        requestedSelection = new(delInfo.Range.MinimumCaretPosition);
-        var lastCodePoint = CodePointLength - 1;
-        return true;
-    }
     IStyle _savedParaEndingStyle;
-    public override bool DeletePartial(DeleteInfo delInfo, out TextRange requestedSelection, UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
-    {
-        var lastCodePoint = CodePointLength - 1;
-        var joinWithNext = delInfo.Range.Contains(lastCodePoint);
-        if (joinWithNext)
-        {
-            if (delInfo.Range.IsReversed)
-                delInfo.Range = delInfo.Range with { Start = lastCodePoint };
-            else
-                delInfo.Range = delInfo.Range with { End = lastCodePoint };
-        }
-        _savedParaEndingStyle = _textBlock.GetStyleAtOffset(_textBlock.CaretIndicies[^1]);
-        var range = delInfo.Range;
-        var offset = range.Minimum;
-        if (offset < 0)
-            offset = 0;
-        var length = range.Maximum - offset;
-        if (offset + length > _textBlock.Length)
-            length = _textBlock.Length - offset;
-        UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, offset, length));
-        requestedSelection = new TextRange(offset, altPosition: false);
-        if (joinWithNext)
-        {
-            TryJoinWithNextParagraph(UndoManager);
-        }
-        return true;
-    }
-    public override bool CanJoinWith(Paragraph next)
-    {
-        return next is ITextParagraph;
-    }
     public override bool TryJoinWithNextParagraph(UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
     {
         if (ParentInfo.Index + 1 >= ParentInfo.Parent.Paragraphs.Count)
@@ -215,18 +175,6 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
             return false;
         UndoManager.Do(new UndoJoinTextParagraphs(GlobalParagraphIndex));
         return true;
-    }
-    public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
-    {
-        // Split the paragraph at the insertion point into paragraphs A and B
-        var paraA = this;
-
-        if (splitIndex == CodePointLength) return new TextParagraph(paraA.EndStyle);
-
-        var paraB = new TextParagraph(paraA.TextBlock.Copy(splitIndex, CodePointLength)) { Properties = { Decoration = Properties.Decoration?.Clone() } };
-        if (splitIndex != CodePointLength - 1)
-            UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, splitIndex, TextBlock.Length - splitIndex - 1));
-        return paraB;
     }
 
     public void SetStyleContinuingFrom(Paragraph other)
@@ -247,104 +195,15 @@ public class TextParagraph : Paragraph, ITextParagraph, IAlignableParagraph
         return TextBlock.GetStyleAtOffset(position.CodePointIndex);
     }
     public override IReadOnlyList<StyleRunEx> GetStyles(int position, int length)
-        => TextBlock.Extract(position, length).StyleRuns.Select(x => new StyleRunEx(x)).ToArray();
+    {
+        if (length > 0)
+            return TextBlock.Extract(position, length).StyleRuns.Select(x => new StyleRunEx(x)).ToArray();
+        return new StyleRunEx[] { new(position, 0, TextBlock.GetStyleAtOffset(position)) };
+    }
 
     public override void ApplyStyle(IStyle style, int position, int length)
     {
         TextBlock.ApplyStyle(position, length, style);
     }
-    protected override NavigationStatus NavigateOverride(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection)
-    {
-        if (direction is NavigationDirection.Up or NavigationDirection.Down)
-        {
-            return VerticalNavigateUsingLineInfo(selection, snap, direction, keepSelection, ref ghostXCoord, out newSelection);
-        }
-        ghostXCoord = null;
-        if (!keepSelection && selection.IsRange)
-        {
-            newSelection = direction is NavigationDirection.Backward ? new(selection.MinimumCaretPosition) : new(selection.MaximumCaretPosition);
-            return NavigationStatus.Success;
-        }
-        newSelection = selection;
-        var indicies = snap switch
-        {
-            NavigationSnap.Character => TextBlock.CaretIndicies,
-            NavigationSnap.Word => TextBlock.WordBoundaryIndicies,
-            _ => throw new ArgumentOutOfRangeException(nameof(snap))
-        };
-
-        var ii = indicies.BinarySearch(selection.End);
-
-        // Work out the new position
-        if (ii < 0)
-        {
-            ii = (~ii);
-            if (direction is NavigationDirection.Forward)
-                ii--;
-        }
-        ii += direction is NavigationDirection.Forward ? 1 : -1;
-
-
-        if (ii < 0)
-        {
-            // Move to end of previous paragraph
-            return NavigationStatus.MoveBefore;
-        }
-
-        if (ii >= indicies.Count)
-        {
-            // Move to start of next paragraph
-            return NavigationStatus.MoveAfter;
-        }
-
-        // Move to new position in this paragraph
-        selection.End = indicies[ii];
-        if (!keepSelection) selection.Start = selection.End;
-        newSelection = selection;
-
-        // Safety: Don't allow steping over paragraph separator
-        if (!selection.IsRange && newSelection.Maximum >= CodePointLength)
-        {
-            return NavigationStatus.MoveAfter;
-        }
-        return NavigationStatus.Success;
-    }
-    public override TextRange GetSelectionRange(CaretPosition position, ParagraphSelectionKind kind)
-    {
-        if (kind is ParagraphSelectionKind.Word)
-        {
-            var indicies = TextBlock.WordBoundaryIndicies;
-            var ii = indicies.BinarySearch(position.CodePointIndex);
-            if (ii < 0)
-                ii = (~ii - 1);
-            if (ii >= indicies.Count)
-                ii = indicies.Count - 1;
-
-            if (ii + 1 >= indicies.Count)
-            {
-                // Point is past end of paragraph
-                return new TextRange(
-                    indicies[ii],
-                    indicies[ii],
-                    true
-                );
-            }
-
-            // Create text range covering the entire word
-            return new TextRange(
-                indicies[ii],
-                indicies[ii + 1],
-                true
-            );
-        }
-        else
-            return new(position);
-    }
-
-    public override bool ShouldDeletAll(DeleteInfo deleteInfo)
-    {
-        return false;
-    }
-
     public override CaretPosition EndCaretPosition => new(TextBlock.Length - 1, false);
 }

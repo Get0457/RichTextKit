@@ -15,16 +15,23 @@ public class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     {
         _paraIndex = paraIndex;
     }
-
+    bool addedTemporaryParagraph = false;
     public override void Do(Document context)
     {
         _paragraph = context.Paragraphs.GetParentAndChild(_paraIndex, out var _parent, out var _index);
+        var startStyle = _parent.Paragraphs[0].StartStyle;
         _parent.Paragraphs.RemoveAt(_index);
         foreach (var i in _index.._parent.Paragraphs.Count)
         {
             _parent.Paragraphs[i].ParentInfo = _parent.Paragraphs[i].ParentInfo with { Index = i };
         }
         _paragraph.OnParagraphRemoved(context);
+        if (addedTemporaryParagraph = _parent.Paragraphs.Count is 0)
+        {
+            var tempPara = new TextParagraph(startStyle);
+            _parent.Paragraphs.Add(tempPara);
+            tempPara.OnParagraphAdded(context);
+        }
         context.Layout.Invalidate();
     }
     public override void Redo(Document context)
@@ -36,7 +43,15 @@ public class UndoDeleteParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
 
     public override void Undo(Document context)
     {
-        context.Paragraphs.GetParentAndChild(_paraIndex, out var _parent, out var _index);
+        context.Paragraphs.GetParent(_paraIndex, out var _parent);
+        var _index = _paraIndex.RecursiveIndexArray[^1];
+        if (addedTemporaryParagraph)
+        {
+            var temporaryPara = _parent.Paragraphs[0];
+            _parent.Paragraphs.RemoveAt(0);
+            temporaryPara.OnParagraphRemoved(context);
+            addedTemporaryParagraph = false;
+        }
         _parent.Paragraphs.Insert(_index, _paragraph);
         foreach (var i in _index.._parent.Paragraphs.Count)
         {

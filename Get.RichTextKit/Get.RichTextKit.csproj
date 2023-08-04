@@ -21,6 +21,12 @@ The original version of this file can be found at https://github.com/toptensoftw
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Editor\Paragraphs\TextParagraph\**" />
+	  <EmbeddedResource Remove="Editor\Paragraphs\TextParagraph\**" />
+	  <None Remove="Editor\Paragraphs\TextParagraph\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <None Remove="Resources\BidiClasses.trie" />
 	  <None Remove="Resources\GraphemeClusterClasses.trie" />
 	  <None Remove="Resources\LineBreakClasses.trie" />
@@ -43,6 +49,11 @@ The original version of this file can be found at https://github.com/toptensoftw
 	  <EmbeddedResource Include="Resources\GraphemeClusterClasses.trie" />
 	  <EmbeddedResource Include="Resources\LineBreakClasses.trie" />
 	  <EmbeddedResource Include="Resources\WordBoundaryClasses.trie" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Editor\Paragraphs\Interface\" />
+	  <Folder Include="Editor\Paragraphs\Paragraph\" />
 	</ItemGroup>
 
 </Project>

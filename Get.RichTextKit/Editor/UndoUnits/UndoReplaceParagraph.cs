@@ -15,7 +15,7 @@ public class UndoReplaceParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
         _paraIndex = paraIndex;
         _newParagraph = newParagraph;
     }
-
+    bool addTemporaryParagraph = false;
     public override void Do(Document context)
     {
         _oldParagraph = context.Paragraphs.GetParentAndChild(_paraIndex, out var _parent, out var _index);
@@ -23,6 +23,12 @@ public class UndoReplaceParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
         _newParagraph.ParentInfo = new(_parent, _index);
         _oldParagraph.OnParagraphRemoved(context);
         _newParagraph.OnParagraphAdded(context);
+        if (addTemporaryParagraph = _parent.Paragraphs[^1] is not TextParagraph)
+        {
+            var tempPara = new TextParagraph(_newParagraph.EndStyle);
+            _parent.Paragraphs.Add(tempPara);
+            tempPara.OnParagraphAdded(context);
+        }
         context.Layout.Invalidate();
     }
     public override void Redo(Document context)
@@ -35,6 +41,13 @@ public class UndoReplaceParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     public override void Undo(Document context)
     {
         _newParagraph = context.Paragraphs.GetParentAndChild(_paraIndex, out var _parent, out var _index);
+        if (addTemporaryParagraph)
+        {
+            addTemporaryParagraph = false;
+            var tempPara = _parent.Paragraphs[^1];
+            _parent.Paragraphs.RemoveAt(_parent.Paragraphs.Count - 1);
+            tempPara.OnParagraphRemoved(context);
+        }
         _parent.Paragraphs[_index] = _oldParagraph;
         _oldParagraph.ParentInfo = new(_parent, _index);
         _newParagraph.OnParagraphRemoved(context);

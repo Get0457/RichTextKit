@@ -19,6 +19,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
 {
     bool DeletePartialImplement(bool doDelete, DeleteInfo delInfo, out TextRange requestedSelection, UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
     {
+        var beginningStyle = StartStyle;
         var lastCodePoint = CodePointLength - 1;
         var joinWithNext = delInfo.Range.Contains(lastCodePoint);
         if (joinWithNext)
@@ -45,7 +46,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
             {
                 var child = Children[paraIdx];
                 var savedLength = child.CodePointLength;
-                if (child.ShouldDeletAll(delInfo with { Range = newRange }))
+                if (child.ShouldDeleteAll(delInfo with { Range = newRange }))
                 {
                     requestedSelection = newRange;
                     requestedSelection.Start = requestedSelection.End = requestedSelection.Minimum;
@@ -238,6 +239,10 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
             goto SuccessDelete;
         }
     SuccessDelete:
+        if (Children.Count is 0)
+        {
+            UndoManager.Do(new UndoInsertParagraph(this, 0, new TextParagraph(beginningStyle)));
+        }
         if (!doDelete) return true;
         if (joinWithNext) TryJoinWithNextParagraph(UndoManager);
         return true;
@@ -250,7 +255,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     {
         return DeletePartialImplement(false, deleteInfo, out requestedSelection, null);
     }
-    public override bool ShouldDeletAll(DeleteInfo deleteInfo)
+    public override bool ShouldDeleteAll(DeleteInfo deleteInfo)
     {
         return false;
     }

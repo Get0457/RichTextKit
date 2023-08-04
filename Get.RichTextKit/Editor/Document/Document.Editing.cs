@@ -243,86 +243,87 @@ public partial class DocumentEditor
     /// </summary>
     /// <param name="position">The position to insert the text at</param>
     /// <param name="text">The text to insert</param>
-    /// <returns>The index of the first paragraph affected</returns>
-    int InsertInternal(int position, StyledText text)
+    //// <returns>The index of the first paragraph affected</returns>
+    void /* int */ InsertInternal(int position, StyledText text)
     {
-        // Find the position in the document
-        var para = Document.Paragraphs.GlobalChildrenFromCodePointIndex(new CaretPosition(position), out var parent, out var paraIndex, out var indexInParagraph);
+        Document.rootParagraph.AddText(position, text, Document.UndoManager);
+//        // Find the position in the document
+//        var para = Document.Paragraphs.GlobalChildrenFromCodePointIndex(new CaretPosition(position), out var parent, out var paraIndex, out var indexInParagraph);
 
-        // Is it a text paragraph?
-        if (para is not ITextParagraph)
-        {
-            // TODO:
-#if DEBUG
-            Debugger.Break();
-#endif
-            throw new NotImplementedException();
-        }
+//        // Is it a text paragraph?
+//        if (para is not ITextParagraph)
+//        {
+//            // TODO:
+//#if DEBUG
+//            Debugger.Break();
+//#endif
+//            throw new NotImplementedException();
+//        }
 
-        // Split the passed text into paragraphs
-        var parts = text.CodePoints.GetRanges(Document.NewParagraphSeparator).ToArray();
-        if (parts.Length > 1)
-        {
-            // Split the paragraph at the insertion point into paragraphs A and B
-            var paraA = para;
-            var paraB = para.Split(Document.UndoManager, indexInParagraph);
-            int startingAppendingIdx = 1;
-            // Append the first part of the inserted text to the end of paragraph A
-            var firstPart = parts[0];
-            if (firstPart.Length != 0)
-            {
-                if (paraA is ITextParagraph)
-                    Document.UndoManager.Do(new UndoInsertText(
-                        paraA.GlobalParagraphIndex,
-                        indexInParagraph,
-                        text.Extract(firstPart.Offset, firstPart.Length)
-                    ));
-                else startingAppendingIdx = 0;
-            }
+//        // Split the passed text into paragraphs
+//        var parts = text.CodePoints.GetRanges(Document.NewParagraphSeparator).ToArray();
+//        if (parts.Length > 1)
+//        {
+//            // Split the paragraph at the insertion point into paragraphs A and B
+//            var paraA = para;
+//            var paraB = para.Split(Document.UndoManager, indexInParagraph);
+//            int startingAppendingIdx = 1;
+//            // Append the first part of the inserted text to the end of paragraph A
+//            var firstPart = parts[0];
+//            if (firstPart.Length != 0)
+//            {
+//                if (paraA is ITextParagraph)
+//                    Document.UndoManager.Do(new UndoInsertText(
+//                        paraA.GlobalParagraphIndex,
+//                        indexInParagraph,
+//                        text.Extract(firstPart.Offset, firstPart.Length)
+//                    ));
+//                else startingAppendingIdx = 0;
+//            }
 
-            int endingAppendingIdx = parts.Length - 1;
-            // Prepend the last text part of the inserted text to the start paragraph B
-            var lastPart = parts[parts.Length - 1];
-            if (lastPart.Length != 0)
-            {
-                if (paraB is ITextParagraph)
-                    Document.UndoManager.Do(new UndoInsertText(paraB.GlobalParagraphIndex, 0, text.Extract(lastPart.Offset, lastPart.Length)));
-                else endingAppendingIdx = parts.Length;
-            }
+//            int endingAppendingIdx = parts.Length - 1;
+//            // Prepend the last text part of the inserted text to the start paragraph B
+//            var lastPart = parts[parts.Length - 1];
+//            if (lastPart.Length != 0)
+//            {
+//                if (paraB is ITextParagraph)
+//                    Document.UndoManager.Do(new UndoInsertText(paraB.GlobalParagraphIndex, 0, text.Extract(lastPart.Offset, lastPart.Length)));
+//                else endingAppendingIdx = parts.Length;
+//            }
 
-            // We could do this above, but by doing it after the above InsertText operations
-            // we prevent subsequent typing from be coalesced into this unit.
-            Document.UndoManager.Do(new UndoInsertParagraph(parent, paraIndex + 1, paraB));
+//            // We could do this above, but by doing it after the above InsertText operations
+//            // we prevent subsequent typing from be coalesced into this unit.
+//            Document.UndoManager.Do(new UndoInsertParagraph(parent, paraIndex + 1, paraB));
 
-            // Create new paragraphs for parts [1..N-1] of the inserted text and insert them
-            // betweeen paragraphs A and B.
-            for (int i = startingAppendingIdx; i < endingAppendingIdx; i++)
-            {
-                var betweenPara = new TextParagraph(para.EndStyle);
-                betweenPara.SetStyleContinuingFrom(para);
-                var part = parts[i];
-                betweenPara.TextBlock.InsertText(0, text.Extract(part.Offset, part.Length));
-                Document.UndoManager.Do(new UndoInsertParagraph(parent, paraIndex + i, betweenPara));
-            }
-        }
-        else
-        {
-            if (para is ITextParagraph tp)
-            {
-                if (tp.TextBlock.Length == indexInParagraph)
-                    indexInParagraph--;
-                Document.UndoManager.Do(new UndoInsertText(para.GlobalParagraphIndex, indexInParagraph, text));
-            }
-            else
-            {
-                var newPara = new TextParagraph(para.EndStyle);
-                newPara.SetStyleContinuingFrom(para);
-                newPara.TextBlock.AddText(text);
-                Document.UndoManager.Do(new UndoInsertParagraph(parent, paraIndex + 1, newPara));
-            }
-        }
+//            // Create new paragraphs for parts [1..N-1] of the inserted text and insert them
+//            // betweeen paragraphs A and B.
+//            for (int i = startingAppendingIdx; i < endingAppendingIdx; i++)
+//            {
+//                var betweenPara = new TextParagraph(para.EndStyle);
+//                betweenPara.SetStyleContinuingFrom(para);
+//                var part = parts[i];
+//                betweenPara.TextBlock.InsertText(0, text.Extract(part.Offset, part.Length));
+//                Document.UndoManager.Do(new UndoInsertParagraph(parent, paraIndex + i, betweenPara));
+//            }
+//        }
+//        else
+//        {
+//            if (para is ITextParagraph tp)
+//            {
+//                if (tp.TextBlock.Length == indexInParagraph)
+//                    indexInParagraph--;
+//                Document.UndoManager.Do(new UndoInsertText(para.GlobalParagraphIndex, indexInParagraph, text));
+//            }
+//            else
+//            {
+//                var newPara = new TextParagraph(para.EndStyle);
+//                newPara.SetStyleContinuingFrom(para);
+//                newPara.TextBlock.AddText(text);
+//                Document.UndoManager.Do(new UndoInsertParagraph(parent, paraIndex + 1, newPara));
+//            }
+//        }
 
-        return paraIndex;
+//        return paraIndex;
     }
     /// <summary>
     /// Gets the range of text that will be overwritten by overtype mode

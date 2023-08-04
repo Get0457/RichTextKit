@@ -78,6 +78,24 @@ public class DocumentParagraphs : IParagraphCollection
         paraIndex = index.RecursiveIndexArray[^1];
         return (Paragraph)currParent;
     }
+    public void GetParent(ParagraphIndex index, out IParagraphCollection parent)
+    {
+        IParagraphCollection oldPraent = Document.rootParagraph;
+        IParagraphCollection currParent = Document.rootParagraph;
+        foreach (var (recursionLevel, currIndex) in (..(index.RecursiveIndexArray.Length - 1)).Select(i => (i, index.RecursiveIndexArray[i])))
+        {
+            if (currParent.Paragraphs[currIndex] is not IParagraphCollection newParent)
+            {
+                if (recursionLevel + 2 != index.RecursiveIndexArray.Length)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                parent = currParent;
+                return;
+            }
+            oldPraent = currParent;
+            currParent = newParent;
+        }
+        parent = oldPraent;
+    }
     public int Count => Document.rootParagraph.Children.Count;
     public void Add(Paragraph paragraph) => Document.rootParagraph.Children.Add(paragraph);
     bool IParagraphCollection.IsChildrenReadOnly => false;

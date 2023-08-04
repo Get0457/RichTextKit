@@ -1,6 +1,6 @@
 ﻿// This file has been edited and modified from its original version.
 // The original version of this file can be found at https://github.com/toptensoftware/RichTextKit/.
-using Get.RichTextKit;
+#nullable enable
 using Get.RichTextKit.Editor.DocumentView;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Editor.Structs;
@@ -21,7 +21,7 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
     {
         if (context.Paragraphs[_paraIndex] is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
-        _savedText = _textBlock.Extract(_offset, _length);
+        _savedText = _length > 0 ? _textBlock.Extract(_offset, _length) : null;
         _textBlock.DeleteText(_offset, _length);
     }
     public override void Redo(Document context)
@@ -37,8 +37,9 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
         Paragraph para;
         if ((para = context.Paragraphs[_paraIndex]) is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
-        _textBlock.InsertText(_offset, _savedText);
-        var length = _savedText.Length;
+        if (_savedText != null)
+            _textBlock.InsertText(_offset, _savedText);
+        var length = _savedText?.Length ?? 0;
         _savedText = null;
         NotifyInfo(new(NewSelection: new(para.GlobalInfo.CodePointIndex + _offset + length)));
     }
@@ -54,7 +55,7 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
 
         // Copy the additional text
         var temp = _textBlock.Extract(_offset - length, length);
-        _savedText.InsertText(0, temp);
+        (_savedText ??= new()).InsertText(0, temp);
         _textBlock.DeleteText(_offset - length, length);
 
         // Update position
@@ -75,7 +76,7 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
 
         // Copy the additional text
         var temp = _textBlock.Extract(_offset, length);
-        _savedText.InsertText(_length, temp);
+        (_savedText ??= new()).InsertText(_length, temp);
         _textBlock.DeleteText(_offset, length);
 
         // Update position
@@ -95,8 +96,7 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
         // This can happen when a DeleteText unit is retroactively
         // constructed when typing in overtype mode at the end of a 
         // paragraph
-        if (_savedText == null)
-            _savedText = new StyledText();
+        _savedText ??= new StyledText();
 
         // Copy the additional text
         var temp = _textBlock.Extract(_offset + offset, length);
@@ -112,5 +112,5 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
     ParagraphIndex _paraIndex;
     int _offset;
     int _length;
-    StyledText _savedText;
+    StyledText? _savedText;
 }

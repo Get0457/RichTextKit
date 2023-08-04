@@ -219,7 +219,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         newSelection = sel.TextRange;
         return NavigationStatus.Success;
     }
-    public override bool ShouldDeletAll(DeleteInfo deleteInfo)
+    public override bool ShouldDeleteAll(DeleteInfo deleteInfo)
     {
         var sel = TableSelection.FromRange(this, deleteInfo.Range);
         var (r1, c1) = sel.Minimum;
