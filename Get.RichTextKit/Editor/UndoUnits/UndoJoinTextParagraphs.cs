@@ -6,7 +6,7 @@ using Get.RichTextKit.Utils;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
 
-class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
+public class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
 {
     public UndoJoinTextParagraphs(ParagraphIndex paraIndex)
     {
@@ -29,9 +29,11 @@ class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
             // Delete the paragraph separator
             _paragraphSeparator = firstTextPara.TextBlock.Extract(firstTextPara.TextBlock.Length - 1, 1);
             Debug.Assert(_paragraphSeparator.Length == 1 && _paragraphSeparator.CodePoints[0] is Document.NewParagraphSeparator);
+            firstTextPara.EnsureReadyToModify();
             firstTextPara.TextBlock.DeleteText(firstTextPara.TextBlock.Length - 1, 1);
             // Add the second paragraph text
             firstTextPara.TextBlock.AddText(secondTextPara.TextBlock);
+            firstTextPara.OnTextBlockChanged();
         }
 
         // Remove the joined paragraph
@@ -57,10 +59,12 @@ class UndoJoinTextParagraphs : UndoUnit<Document, DocumentViewUpdateInfo>
         var firstPara = context.Paragraphs.GetParentAndChild(_paraIndex, out var parent, out var _paragraph);
         if (firstPara is ITextParagraph firstTextPara)
         {
+            firstTextPara.EnsureReadyToModify();
             // Delete the second paragraph text
             firstTextPara.TextBlock.DeleteText(_splitPoint, firstTextPara.TextBlock.Length - _splitPoint);
             // Add the paragraph separator back
             firstTextPara.TextBlock.AddText(_paragraphSeparator);
+            firstTextPara.OnTextBlockChanged();
         }
         else Debugger.Break();
         // Restore the split paragraph

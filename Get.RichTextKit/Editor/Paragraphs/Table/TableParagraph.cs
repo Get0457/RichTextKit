@@ -43,10 +43,6 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     {
         return false;
     }
-    public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
-    {
-        return null!;
-    }
 
     public override LineInfo GetLineInfo(int line)
     {

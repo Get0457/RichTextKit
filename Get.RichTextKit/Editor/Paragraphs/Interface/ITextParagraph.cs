@@ -8,4 +8,7 @@ public interface ITextParagraph
     /// Gets the TextBlock associated with this paragraph
     /// </summary>
     TextBlock TextBlock { get; }
+
+    void EnsureReadyToModify();
+    void OnTextBlockChanged();
 }

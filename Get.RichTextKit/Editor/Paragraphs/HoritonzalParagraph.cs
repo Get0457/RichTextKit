@@ -56,10 +56,6 @@ public class HorizontalParagraph : PanelParagraph
     {
         return false;
     }
-    public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
-    {
-        return null!;
-    }
     public override HitTestResult HitTestLine(int lineIndex, float x)
     {
         if (lineIndex > 0 && lineIndex < LineCount - 1) return base.HitTestLine(lineIndex, x);

@@ -58,10 +58,6 @@ public partial class VerticalParagraph : PanelParagraph
     {
         return false;
     }
-    public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
-    {
-        return null!;
-    }
 
     protected override float ContentWidthOverride => Children.Count is 0 ? 0: Children.Max(x => x.ContentWidth);
 

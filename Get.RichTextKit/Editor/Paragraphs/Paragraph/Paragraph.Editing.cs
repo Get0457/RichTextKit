@@ -50,5 +50,4 @@ partial class Paragraph
     public abstract bool DeletePartial(DeleteInfo deleteInfo, out TextRange requestedSelection, UndoManager<Document, DocumentViewUpdateInfo> UndoManager);
     public virtual bool CanJoinWith(Paragraph other) { return false; }
     public virtual bool TryJoinWithNextParagraph(UndoManager<Document, DocumentViewUpdateInfo> UndoManager) { return false; }
-    public abstract Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex);
 }

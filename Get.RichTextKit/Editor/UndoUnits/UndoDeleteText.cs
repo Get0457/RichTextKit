@@ -8,7 +8,7 @@ using Get.RichTextKit.Utils;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
 
-class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
+public class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
 {
     public UndoDeleteText(ParagraphIndex paraIndex, int offset, int length)
     {
@@ -22,7 +22,9 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
         if (context.Paragraphs[_paraIndex] is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
         _savedText = _length > 0 ? _textBlock.Extract(_offset, _length) : null;
+        tp.EnsureReadyToModify();
         _textBlock.DeleteText(_offset, _length);
+        tp.OnTextBlockChanged();
     }
     public override void Redo(Document context)
     {
@@ -38,7 +40,11 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
         if ((para = context.Paragraphs[_paraIndex]) is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
         if (_savedText != null)
+        {
+            tp.EnsureReadyToModify();
             _textBlock.InsertText(_offset, _savedText);
+            tp.OnTextBlockChanged();
+        }
         var length = _savedText?.Length ?? 0;
         _savedText = null;
         NotifyInfo(new(NewSelection: new(para.GlobalInfo.CodePointIndex + _offset + length)));
@@ -56,7 +62,9 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
         // Copy the additional text
         var temp = _textBlock.Extract(_offset - length, length);
         (_savedText ??= new()).InsertText(0, temp);
+        tp.EnsureReadyToModify();
         _textBlock.DeleteText(_offset - length, length);
+        tp.OnTextBlockChanged();
 
         // Update position
         _offset -= length;
@@ -77,7 +85,9 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
         // Copy the additional text
         var temp = _textBlock.Extract(_offset, length);
         (_savedText ??= new()).InsertText(_length, temp);
+        tp.EnsureReadyToModify();
         _textBlock.DeleteText(_offset, length);
+        tp.OnTextBlockChanged();
 
         // Update position
         _length += length;
@@ -101,7 +111,9 @@ class UndoDeleteText : UndoUnit<Document, DocumentViewUpdateInfo>
         // Copy the additional text
         var temp = _textBlock.Extract(_offset + offset, length);
         _savedText.InsertText(_length, temp);
+        tp.EnsureReadyToModify();
         _textBlock.DeleteText(_offset + offset, length);
+        tp.OnTextBlockChanged();
 
         // Update position
         _length += length;

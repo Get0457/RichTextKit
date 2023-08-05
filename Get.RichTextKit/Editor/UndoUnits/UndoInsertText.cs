@@ -9,7 +9,7 @@ using Get.RichTextKit.Utils;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
 
-class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
+public class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
 {
     public UndoInsertText(ParagraphIndex paraIndex, int offset, StyledText text)
     {
@@ -37,7 +37,9 @@ class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
         if ((para = context.Paragraphs[_paraIndex]) is not ITextParagraph tp) return;
         var _textBlock = tp.TextBlock;
         // Insert into the text block
+        tp.EnsureReadyToModify();
         _textBlock.InsertText(_offset + _length, text);
+        tp.OnTextBlockChanged();
 
         // Update length
         _length += text.Length;
@@ -51,8 +53,10 @@ class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
         var _textBlock = tp.TextBlock;
 
         // Insert into the text block
+        tp.EnsureReadyToModify();
         _textBlock.DeleteText(_offset, _length);
         _textBlock.InsertText(_offset, text);
+        tp.OnTextBlockChanged();
 
         // Update length
         _length = text.Length;
@@ -66,7 +70,9 @@ class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
         var _textBlock = tp.TextBlock;
 
         // Insert the text into the text block
+        tp.EnsureReadyToModify();
         _textBlock.InsertText(_offset, _text);
+        tp.OnTextBlockChanged();
 
         // Release our copy of the text
         _notifyTextLength = _text.Length;
@@ -89,7 +95,9 @@ class UndoInsertText : UndoUnit<Document, DocumentViewUpdateInfo>
         _text = _textBlock.Extract(_offset, _length);
 
         // Delete it
+        tp.EnsureReadyToModify();
         _textBlock.DeleteText(_offset, _length);
+        tp.OnTextBlockChanged();
         context.Layout.EnsureValid();
         NotifyInfo(new(NewSelection: new(para.GlobalInfo.CodePointIndex + _offset)));
     }

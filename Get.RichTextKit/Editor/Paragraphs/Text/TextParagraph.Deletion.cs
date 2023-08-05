@@ -44,18 +44,6 @@ partial class TextParagraph
         var lastCodePoint = CodePointLength - 1;
         return true;
     }
-    public override Paragraph Split(UndoManager<Document, DocumentViewUpdateInfo> UndoManager, int splitIndex)
-    {
-        // Split the paragraph at the insertion point into paragraphs A and B
-        var paraA = this;
-
-        if (splitIndex == CodePointLength) return new TextParagraph(paraA.EndStyle);
-
-        var paraB = new TextParagraph(paraA.TextBlock.Copy(splitIndex, CodePointLength)) { Properties = { Decoration = Properties.Decoration?.Clone() } };
-        if (splitIndex != CodePointLength - 1)
-            UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, splitIndex, TextBlock.Length - splitIndex - 1));
-        return paraB;
-    }
     public override bool ShouldDeleteAll(DeleteInfo deleteInfo)
     {
         return false;

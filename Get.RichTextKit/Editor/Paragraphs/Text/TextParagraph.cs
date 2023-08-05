@@ -206,4 +206,7 @@ public partial class TextParagraph : Paragraph, ITextParagraph, IAlignableParagr
         TextBlock.ApplyStyle(position, length, style);
     }
     public override CaretPosition EndCaretPosition => new(TextBlock.Length - 1, false);
+
+    void ITextParagraph.OnTextBlockChanged() { }
+    void ITextParagraph.EnsureReadyToModify() { }
 }
