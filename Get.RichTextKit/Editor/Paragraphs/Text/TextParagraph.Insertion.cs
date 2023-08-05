@@ -7,10 +7,6 @@ namespace Get.RichTextKit.Editor.Paragraphs;
 
 partial class TextParagraph
 {
-    protected internal override InsertTextStatus AddNewParagraph(int codePointIndex, UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
-    {
-        throw new Exception();
-    }
     protected internal override (InsertTextStatus Status, StyledText RemainingText) AddText(int codePointIndex, StyledText text, UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
     {
         var (idx, _) = text.CodePoints.WithIndex().FirstOrDefault(x => x.Item is Document.NewParagraphSeparator);
@@ -32,7 +28,7 @@ partial class TextParagraph
         UndoManager.Do(new UndoInsertText(GlobalParagraphIndex, codePointIndex, text.Extract(0, Math.Min(idx + 1, text.Length))));
 
         // Delete the remaining text
-        UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, codePointIndex + text.Length, textAfterNewSeparator.Length + 1));
+        UndoManager.Do(new UndoDeleteText(GlobalParagraphIndex, codePointIndex + Math.Min(idx + 1, text.Length), textAfterNewSeparator.Length + 1));
 
         // Add the remaining text after paragraph separator and the
         StyledText remainingText = new();
