@@ -226,6 +226,17 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         var (r2, c2) = sel.Maximum;
         return r1 is 0 && c1 is 0 && r2 == _rowCount - 1 && c2 == _columnCount - 1;
     }
+    protected internal override (InsertTextStatus Status, StyledText RemainingText) AddText(int codePointIndex, StyledText text, UndoManager<Document, DocumentViewUpdateInfo> UndoManager)
+    {
+        if (
+            // Pressing Enter on the first cell should insert the paragraph before 
+            codePointIndex is 0 && text.CodePoints.Length is 1 && text.CodePoints[0] is Document.NewParagraphSeparator &&
+            // but only if previous paragraph is not a text paragraph
+            ParentInfo.Parent.Paragraphs[Math.Max(ParentInfo.Index - 1, 0)] is not TextParagraph)
+            return (InsertTextStatus.AddBefore, new());
+        else
+            return base.AddText(codePointIndex, text, UndoManager);
+    }
 }
 static partial class Extension
 {
