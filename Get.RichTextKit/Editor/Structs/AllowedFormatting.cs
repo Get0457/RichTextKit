@@ -4,9 +4,9 @@ public readonly struct AllowedFormatting
 {
     public AllowedFormatting(bool defaultValue = false)
     {
-        AllowFontColorChange = defaultValue;
-        AllowFontSizeChange = defaultValue;
-        AllowFontFamilyChange = defaultValue;
+        TextColor = defaultValue;
+        FontSize = defaultValue;
+        FontFamily = defaultValue;
         Bold = defaultValue;
         Italic = defaultValue;
         Underline = defaultValue;
@@ -16,9 +16,9 @@ public readonly struct AllowedFormatting
         Alignment = defaultValue;
     }
 
-    public bool AllowFontColorChange { get; init; }
-    public bool AllowFontSizeChange { get; init; }
-    public bool AllowFontFamilyChange { get; init; }
+    public bool TextColor { get; init; }
+    public bool FontSize { get; init; }
+    public bool FontFamily { get; init; }
     public bool Bold { get; init; }
     public bool Italic { get; init; }
     public bool Underline { get; init; }

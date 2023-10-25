@@ -42,6 +42,7 @@ The original version of this file can be found at https://github.com/toptensoftw
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="System.Memory" Version="4.5.5" />
+		<PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0-preview.6.23329.7" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -53,7 +54,6 @@ The original version of this file can be found at https://github.com/toptensoftw
 
 	<ItemGroup>
 	  <Folder Include="Editor\Paragraphs\Interface\" />
-	  <Folder Include="Editor\Paragraphs\Paragraph\" />
 	</ItemGroup>
 
 </Project>

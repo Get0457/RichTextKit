@@ -4,6 +4,7 @@ using Get.RichTextKit.Editor.DocumentView;
 using Get.RichTextKit.Editor.Paragraphs;
 using Get.RichTextKit.Editor.Structs;
 using Get.RichTextKit.Utils;
+using System.Reflection;
 
 namespace Get.RichTextKit.Editor.UndoUnits;
 
@@ -12,6 +13,8 @@ public class UndoReplaceParagraph : UndoUnit<Document, DocumentViewUpdateInfo>
     Paragraph _newParagraph;
     public UndoReplaceParagraph(ParagraphIndex paraIndex, Paragraph newParagraph)
     {
+        if (paraIndex.RecursiveIndexArray.Length is 0)
+            throw new ArgumentException("Replacing the root paragraph is not allowed");
         _paraIndex = paraIndex;
         _newParagraph = newParagraph;
     }

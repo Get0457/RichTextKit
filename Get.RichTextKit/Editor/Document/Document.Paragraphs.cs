@@ -33,12 +33,14 @@ public partial class Document
 public class DocumentParagraphs : IParagraphCollection
 {
     readonly Document Document;
-
+    public Paragraph UnsafeGetRootParagraph() => Document.rootParagraph;
     public Paragraph this[int index] => Document.rootParagraph.Children[index];
     public Paragraph this[ParagraphIndex index]
     {
         get
         {
+            if (index.RecursiveIndexArray.Length is 0)
+                return Document.rootParagraph;
             IParagraphCollection p = Document.rootParagraph;
             foreach (var (recursionLevel, currIndex) in index.RecursiveIndexArray.WithIndex())
             {
@@ -97,7 +99,10 @@ public class DocumentParagraphs : IParagraphCollection
         parent = oldPraent;
     }
     public int Count => Document.rootParagraph.Children.Count;
-    public void Add(Paragraph paragraph) => Document.rootParagraph.Children.Add(paragraph);
+    public void Add(Paragraph paragraph)
+    {
+        Document.UndoManager.Do(new UndoInsertParagraph(Document.rootParagraph, Document.rootParagraph.Children.Count, paragraph));
+    }
     bool IParagraphCollection.IsChildrenReadOnly => false;
 
     public IList<Paragraph> Paragraphs => Document.rootParagraph.Children;
@@ -209,8 +214,8 @@ public readonly record struct SubRunInfo(ParentInfo ParentInfo, int Offset, int 
     public IParagraphCollection Parent => ParentInfo.Parent;
     public int Index => ParentInfo.Index;
     public bool Partial =>
-        Offset > Paragraph.StartCaretPosition.CodePointIndex ||
-        Offset + Length < Paragraph.EndCaretPosition.CodePointIndex;
+        Offset > Paragraph.UserStartCaretPosition.CodePointIndex ||
+        Offset + Length < Paragraph.UserEndCaretPosition.CodePointIndex;
 }
 public readonly record struct SubRunBFSInfo(SubRunInfo SubRunInfo, IEnumerable<SubRunBFSInfo> NextLevelInfo)
 {

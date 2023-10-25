@@ -79,7 +79,7 @@ namespace Get.RichTextKit.Styles
         /// <summary>
         /// The background color of this run.
         /// </summary>
-        SKColor BackgroundColor { get; }
+        SKColor? BackgroundColor { get; }
 
         /// <summary>
         /// Color of the halo

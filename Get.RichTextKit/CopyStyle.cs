@@ -39,7 +39,7 @@ namespace Get.RichTextKit
         public StrikeThroughStyle StrikeThrough { get; set; }
         public float LineHeight { get; set; }
         public SKColor? TextColor { get; set; }
-        public SKColor BackgroundColor { get; set; }
+        public SKColor? BackgroundColor { get; set; }
         public SKColor HaloColor { get; set; }
         public float HaloWidth { get; set; }
         public float HaloBlur { get; set; }

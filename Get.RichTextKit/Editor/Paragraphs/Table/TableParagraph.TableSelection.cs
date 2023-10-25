@@ -23,8 +23,8 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
             //if (range.End > tableRef.EndCaretPosition.CodePointIndex && range.Start > tableRef.EndCaretPosition.CodePointIndex)
             //    return new(tableRef, new(tableRef, 2, 2), new(tableRef, 2, 2));
             range = range.Clamp(tableRef.CodePointLength);
-            var idx1 = TableIndex.FromCaretPosition(tableRef, range.Start < 0 ? tableRef.StartCaretPosition : range.StartCaretPosition);
-            var idx2 = TableIndex.FromCaretPosition(tableRef, range.End >= tableRef.CodePointLength ? tableRef.EndCaretPosition : range.EndCaretPosition);
+            var idx1 = TableIndex.FromCaretPosition(tableRef, range.Start < 0 ? tableRef.UserStartCaretPosition : range.StartCaretPosition);
+            var idx2 = TableIndex.FromCaretPosition(tableRef, range.End >= tableRef.CodePointLength ? tableRef.UserEndCaretPosition : range.EndCaretPosition);
             return new(tableRef, idx1, idx2);
         }
         public bool IsValid => Start != End;
@@ -40,14 +40,14 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
                 var p2 = Owner.Children[p2Idx];
                 if (p1Idx > p2Idx)
                     return new(
-                        p1.LocalInfo.OffsetFromThis(p1.EndCaretPosition).CodePointIndex,
-                        p2.LocalInfo.OffsetFromThis(p2.StartCaretPosition).CodePointIndex,
+                        p1.LocalInfo.OffsetFromThis(p1.UserEndCaretPosition).CodePointIndex,
+                        p2.LocalInfo.OffsetFromThis(p2.UserStartCaretPosition).CodePointIndex,
                         false
                     );
                 else
                     return new(
-                        p1.LocalInfo.OffsetFromThis(p1.StartCaretPosition).CodePointIndex,
-                        p2.LocalInfo.OffsetFromThis(p2.EndCaretPosition).CodePointIndex,
+                        p1.LocalInfo.OffsetFromThis(p1.UserStartCaretPosition).CodePointIndex,
+                        p2.LocalInfo.OffsetFromThis(p2.UserEndCaretPosition).CodePointIndex,
                         false
                     );
             }

@@ -20,10 +20,8 @@ using Get.RichTextKit.Editor.Structs;
 using Get.RichTextKit.Editor.DocumentView;
 using SkiaSharp;
 using System.Drawing;
-using Get.RichTextKit;
 using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
-using Get.RichTextKit.Editor.Paragraphs.Panel;
 
 namespace Get.RichTextKit.Editor.Paragraphs;
 public enum NavigationStatus
@@ -74,8 +72,9 @@ public abstract partial class Paragraph : IRun, IParentOrParagraph
             AvaliableWidth = owner.AvaliableWidth - Margin.Left - Margin.Right - (Properties.Decoration?.FrontOffset ?? 0)
         });
 
-    public virtual CaretPosition StartCaretPosition => new(0, altPosition: false);
-    public virtual CaretPosition EndCaretPosition => new(Math.Max(0, CodePointLength - 2), altPosition: false);
+    public virtual CaretPosition UserStartCaretPosition => new(0, altPosition: false);
+    public virtual CaretPosition UserEndCaretPosition => new(Math.Max(0, CodePointLength - 2), altPosition: false);
+    public virtual CaretPosition TrueEndCaretPosition => new(Math.Max(0, CodePointLength - 1), altPosition: false);
     public record struct PaintOptions(RectangleF ViewBounds, TextPaintOptions TextPaintOptions, IDocumentViewOwner? ViewOwner);
     /// <summary>
     /// Paint this paragraph

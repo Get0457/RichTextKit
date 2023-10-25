@@ -12,7 +12,7 @@ public interface IWriteableStyle : IStyle
     new StrikeThroughStyle StrikeThrough { set; }
     new float LineHeight { set; }
     new SKColor? TextColor { set; }
-    new SKColor BackgroundColor { set; }
+    new SKColor? BackgroundColor { set; }
     new SKColor HaloColor { set; }
     new float HaloWidth { set; }
     new float HaloBlur { set; }

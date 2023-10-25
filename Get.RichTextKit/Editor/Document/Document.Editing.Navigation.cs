@@ -44,13 +44,13 @@ public partial class DocumentEditor
             case NavigationStatus.MoveBefore:
                 // move to beginning
                 if (direction is NavigationDirection.Forward or NavigationDirection.Backward)
-                    selection.EndCaretPosition = Document.rootParagraph.StartCaretPosition;
+                    selection.EndCaretPosition = Document.rootParagraph.UserStartCaretPosition;
                 if (!keepSelection) selection.Start = selection.End;
                 return selection;
             case NavigationStatus.MoveAfter:
                 // move to end
                 if (direction is NavigationDirection.Forward or NavigationDirection.Backward)
-                    selection.EndCaretPosition = Document.rootParagraph.EndCaretPosition;
+                    selection.EndCaretPosition = Document.rootParagraph.UserEndCaretPosition;
                 if (!keepSelection) selection.Start = selection.End;
                 return selection;
             default:

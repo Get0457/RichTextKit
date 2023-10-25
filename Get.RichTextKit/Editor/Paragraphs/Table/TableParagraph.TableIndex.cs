@@ -16,7 +16,7 @@ namespace Get.RichTextKit.Editor.Paragraphs.Panel;
 
 public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
 {
-    readonly record struct TableIndex(TableParagraph Owner, int Row, int Column)
+    public readonly record struct TableIndex(TableParagraph Owner, int Row, int Column)
     {
         public Paragraph Paragraph
         {

@@ -29,6 +29,9 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
     {
         Children = new();
     }
+    protected PanelParagraph() {
+        Children = new();
+    }
 
 
     /// <inheritdoc />
@@ -259,8 +262,9 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         newRange = default;
         return false;
     }
-    public override CaretPosition StartCaretPosition => Children[0].LocalInfo.OffsetFromThis(Children[0].StartCaretPosition);
-    public override CaretPosition EndCaretPosition => Children[^1].LocalInfo.OffsetFromThis(Children[^1].EndCaretPosition);
+    public override CaretPosition UserStartCaretPosition => Children[0].LocalInfo.OffsetFromThis(Children[0].UserStartCaretPosition);
+    public override CaretPosition UserEndCaretPosition => Children[^1].LocalInfo.OffsetFromThis(Children[^1].UserEndCaretPosition);
+    public override CaretPosition TrueEndCaretPosition => Children[^1].LocalInfo.OffsetFromThis(Children[^1].TrueEndCaretPosition);
     protected override NavigationStatus NavigateOverride(TextRange selection, NavigationSnap snap, NavigationDirection direction, bool keepSelection, ref float? ghostXCoord, out TextRange newSelection)
     {
         if (direction is NavigationDirection.Backward or NavigationDirection.Forward)
@@ -275,7 +279,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                     if (direction is NavigationDirection.Forward or NavigationDirection.Backward)
                     {
                         Children[paraIdx + 1].LocalInfo.OffsetToThis(ref selection);
-                        selection.EndCaretPosition = Children[paraIdx + 1].StartCaretPosition;
+                        selection.EndCaretPosition = Children[paraIdx + 1].UserStartCaretPosition;
                         if (!keepSelection) selection.Start = selection.End;
                         Children[paraIdx + 1].LocalInfo.OffsetFromThis(ref selection);
                         newSelection = selection;
@@ -293,7 +297,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                     if (direction is NavigationDirection.Forward or NavigationDirection.Backward)
                     {
                         Children[paraIdx - 1].LocalInfo.OffsetToThis(ref selection);
-                        selection.EndCaretPosition = Children[paraIdx - 1].EndCaretPosition;
+                        selection.EndCaretPosition = Children[paraIdx - 1].UserEndCaretPosition;
                         if (!keepSelection) selection.Start = selection.End;
                         Children[paraIdx - 1].LocalInfo.OffsetFromThis(ref selection);
                         newSelection = selection;

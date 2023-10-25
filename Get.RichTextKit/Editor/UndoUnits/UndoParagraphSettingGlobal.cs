@@ -104,7 +104,7 @@ public class UndoParagraphSetting<T> : UndoUnit<Document, DocumentViewUpdateInfo
     public override void Redo(Document context)
     {
         base.Redo(context);
-        NotifyInfo(new(NewSelection: new(_para.GlobalInfo.OffsetFromThis(_para.StartCaretPosition))));
+        NotifyInfo(new(NewSelection: new(_para.GlobalInfo.OffsetFromThis(_para.UserStartCaretPosition))));
     }
     bool ConfirmSetStyle(Paragraph para)
     {
@@ -122,7 +122,7 @@ public class UndoParagraphSetting<T> : UndoUnit<Document, DocumentViewUpdateInfo
         _para = context.Paragraphs[paraIdx];
         Setter.Invoke(_para, SavedValue);
         SavedValue = default;
-        NotifyInfo(new(NewSelection: new(_para.GlobalInfo.OffsetFromThis(_para.StartCaretPosition))));
+        NotifyInfo(new(NewSelection: new(_para.GlobalInfo.OffsetFromThis(_para.UserStartCaretPosition))));
         context.RequestRedraw();
     }
 }

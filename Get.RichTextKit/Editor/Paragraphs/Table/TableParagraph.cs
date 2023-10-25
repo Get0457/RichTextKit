@@ -18,13 +18,15 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
 {
     public const float AutoMinCellHeight = 30;
     public const float AutoMinCellWidth = 30;
+    public static VerticalParagraph CreateInner(IStyle style)
+        => new(style) { Margin = new(10) };
     public TableParagraph(IStyle style, int initialRows, int initialCols) : base(style)
     {
         _rowCount = initialRows;
         _columnCount = initialCols;
         foreach (var _ in ..(initialRows * initialCols))
         {
-            Children.Add(new VerticalParagraph(style) { Margin = new(10) });
+            Children.Add(CreateInner(style));
         }
         foreach (var _ in ..initialRows)
         {
@@ -36,6 +38,24 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         }
         Rows = new(this);
         Columns = new(this);
+    }
+    public TableParagraph(IEnumerable<TableLength> ColumnInfo, IEnumerable<(IEnumerable<Paragraph> Cells, TableLength len)> RowsAndInfo)
+    {
+        Rows = new(this);
+        Columns = new(this);
+        foreach (var a in RowsAndInfo)
+        {
+            RowLengths.Add(a.len);
+            _rowCount++;
+            foreach (var b in a.Cells)
+            {
+                Children.Add(b);
+            }
+        }
+        foreach (var a in ColumnInfo)
+        {
+            ColumnLengths.Add(a);
+        }
     }
     public override int DisplayLineCount => 1;
 

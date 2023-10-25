@@ -121,6 +121,10 @@ public partial class DocumentView : INotifyPropertyChanged
             Selection.Range = info.NewSelection.Value;
         }
     }
+    public void Undo()
+        => OwnerDocument.UndoManager.Undo(InvokeUpdateInfo);
+    public void Redo()
+        => OwnerDocument.UndoManager.Redo(InvokeUpdateInfo);
 }
 static partial class Extension
 {

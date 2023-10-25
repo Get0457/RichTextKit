@@ -91,24 +91,33 @@ public partial class DocumentViewController
     {
         var originalRange = DocumentView.Selection.Range;
         // If selecting but not wanting to select
-        if (!selectionMode && originalRange.IsRange)
-        {
-            if (direction is Direction.Left or Direction.Right)
-            {
-                var OrderedRange = originalRange.Start > originalRange.End
-                ? originalRange.Reversed : originalRange;
-                var newCaretPos = direction is Direction.Left
-                    ? OrderedRange.Start : OrderedRange.End;
-                DocumentView.Selection.Range = new(newCaretPos);
-                return;
-            }
-            else
-            {
-                // Up or down: Just use the end position
-                originalRange = new(originalRange.End, originalRange.AltPosition);
-                // TODO: Make this like other text editor engine.
-            }
-        }
+        //if (!selectionMode && originalRange.IsRange)
+        //{
+        //    if (direction is Direction.Left or Direction.Right)
+        //    {
+        //        var OrderedRange = originalRange.Start > originalRange.End
+        //        ? originalRange.Reversed : originalRange;
+        //        var newCaretPos = direction is Direction.Left
+        //            ? OrderedRange.Start : OrderedRange.End;
+        //        float? tempField = null;
+        //        var newPos = DocumentView.OwnerDocument.Editor.Navigate(
+        //            new(newCaretPos),
+        //            Paragraphs.NavigationSnap.Character,
+        //            direction is Direction.Left ? Paragraphs.NavigationDirection.Backward : Paragraphs.NavigationDirection.Forward,
+        //            false,
+        //            ref tempField
+        //        );
+        //        if (direction is Direction.Right && newCaretPos.End > newPos.End)
+        //        DocumentView.Selection.Range = new(newCaretPos);
+        //        return;
+        //    }
+        //    else
+        //    {
+        //        // Up or down: Just use the end position
+        //        originalRange = new(originalRange.End, originalRange.AltPosition);
+        //        // TODO: Make this like other text editor engine.
+        //    }
+        //}
         if (direction is Direction.Left or Direction.Right)
         {
             DocumentView.Selection.Range = DocumentView.OwnerDocument.Editor.Navigate(

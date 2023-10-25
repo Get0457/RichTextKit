@@ -781,11 +781,11 @@ namespace Get.RichTextKit
         /// <param name="ctx"></param>
         internal void PaintBackground(PaintTextContext ctx)
         {
-            if (Style.BackgroundColor != SKColor.Empty && RunKind == FontRunKind.Normal)
+            if (Style.BackgroundColor is not null && Style.BackgroundColor != SKColor.Empty && RunKind == FontRunKind.Normal)
             {
                 var rect = new SKRect(XCoord , Line.YCoord, 
                     XCoord + Width, Line.YCoord + Line.Height);
-                using (var skPaint = new SKPaint {Style = SKPaintStyle.Fill, Color = Style.BackgroundColor})
+                using (var skPaint = new SKPaint {Style = SKPaintStyle.Fill, Color = Style.BackgroundColor.Value})
                 {
                     ctx.Canvas.DrawRect(rect, skPaint);
                 }

@@ -26,6 +26,13 @@ public partial class VerticalParagraph : PanelParagraph
             Children.Add(new TextParagraph(style));
         }
     }
+    public VerticalParagraph(IEnumerable<Paragraph> paragraphs) : base()
+    {
+        foreach (var para in paragraphs)
+        {
+            Children.Add(para);
+        }
+    }
 
     public override Paragraph GetParagraphAt(PointF pt)
         => FindClosestY(pt.Y);

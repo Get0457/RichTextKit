@@ -32,11 +32,11 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         if (IsChildrenReadOnly)
         {
             if (
-                (delInfo.Range.Maximum >= EndCaretPosition.CodePointIndex && delInfo.DeleteMode is DeleteModes.Backward) ||
+                (delInfo.Range.Maximum >= UserEndCaretPosition.CodePointIndex && delInfo.DeleteMode is DeleteModes.Backward) ||
                 (delInfo.Range.Minimum <= 0 && delInfo.DeleteMode is DeleteModes.Forward)
             )
             {
-                requestedSelection = new TextRange(StartCaretPosition.CodePointIndex, EndCaretPosition.CodePointIndex, altPosition: EndCaretPosition.AltPosition);
+                requestedSelection = new TextRange(UserStartCaretPosition.CodePointIndex, UserEndCaretPosition.CodePointIndex, altPosition: UserEndCaretPosition.AltPosition);
                 return false;
             }
         }
@@ -73,7 +73,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                 {
                     if (IsChildrenReadOnly)
                     {
-                        requestedSelection = new TextRange(StartCaretPosition.CodePointIndex, EndCaretPosition.CodePointIndex, altPosition: EndCaretPosition.AltPosition);
+                        requestedSelection = new TextRange(UserStartCaretPosition.CodePointIndex, UserEndCaretPosition.CodePointIndex, altPosition: UserEndCaretPosition.AltPosition);
                         return false;
                     }
                     Debug.Assert(paraIdx + 1 < Children.Count);
@@ -83,7 +83,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                 {
                     if (IsChildrenReadOnly)
                     {
-                        requestedSelection = new TextRange(StartCaretPosition.CodePointIndex, EndCaretPosition.CodePointIndex, altPosition: EndCaretPosition.AltPosition);
+                        requestedSelection = new TextRange(UserStartCaretPosition.CodePointIndex, UserEndCaretPosition.CodePointIndex, altPosition: UserEndCaretPosition.AltPosition);
                         return false;
                     }
                     Debug.Assert(paraIdx >= 1);
@@ -94,7 +94,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
         }
         else if (IsChildrenReadOnly)
         {
-            requestedSelection = new TextRange(StartCaretPosition.CodePointIndex, EndCaretPosition.CodePointIndex, altPosition: EndCaretPosition.AltPosition);
+            requestedSelection = new TextRange(UserStartCaretPosition.CodePointIndex, UserEndCaretPosition.CodePointIndex, altPosition: UserEndCaretPosition.AltPosition);
             return false;
         }
         else
@@ -134,7 +134,7 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                 var idx = interactingRanges[^1].Index;
                 para = interactingRanges[^1].Paragraph;
                 newRange = para.LocalInfo.OffsetToThis(range);
-                if (newRange.Maximum >= para.EndCaretPosition.CodePointIndex && delInfo.DeleteMode is DeleteModes.Backward)
+                if (newRange.Maximum >= para.UserEndCaretPosition.CodePointIndex && delInfo.DeleteMode is DeleteModes.Backward)
                 {
                     Debug.Assert(idx + 1 < Children.Count);
                     // If length = 1, before we attempt anything, we want to try notifying the paragraph first
@@ -150,9 +150,9 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                     if (!Children[idx].CanJoinWith(Children[idx + 1]))
                     {
                         requestedSelection = new TextRange(
-                            Children[idx + 1].StartCaretPosition.CodePointIndex,
-                            Children[idx + 1].EndCaretPosition.CodePointIndex,
-                            altPosition: Children[idx + 1].EndCaretPosition.AltPosition
+                            Children[idx + 1].UserStartCaretPosition.CodePointIndex,
+                            Children[idx + 1].UserEndCaretPosition.CodePointIndex,
+                            altPosition: Children[idx + 1].UserEndCaretPosition.AltPosition
                         );
                         Children[idx + 1].LocalInfo.OffsetFromThis(ref requestedSelection);
                         return false;
@@ -162,15 +162,15 @@ public abstract partial class PanelParagraph : Paragraph, IParagraphPanel
                 idx = interactingRanges[0].Index;
                 para = interactingRanges[0].Paragraph;
                 newRange = para.LocalInfo.OffsetToThis(range);
-                if (newRange.Maximum >= para.EndCaretPosition.CodePointIndex && delInfo.DeleteMode is DeleteModes.Forward)
+                if (newRange.Maximum >= para.UserEndCaretPosition.CodePointIndex && delInfo.DeleteMode is DeleteModes.Forward)
                 {
                     Debug.Assert(idx + 1 < Children.Count);
                     if (!Children[idx].CanJoinWith(Children[idx + 1]))
                     {
                         requestedSelection = new TextRange(
-                            Children[idx + 1].StartCaretPosition.CodePointIndex,
-                            Children[idx + 1].EndCaretPosition.CodePointIndex,
-                            altPosition: Children[idx + 1].EndCaretPosition.AltPosition
+                            Children[idx + 1].UserStartCaretPosition.CodePointIndex,
+                            Children[idx + 1].UserEndCaretPosition.CodePointIndex,
+                            altPosition: Children[idx + 1].UserEndCaretPosition.AltPosition
                         );
                         Children[idx + 1].LocalInfo.OffsetFromThis(ref requestedSelection);
                         return false;

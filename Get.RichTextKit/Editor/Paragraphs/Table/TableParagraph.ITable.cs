@@ -41,7 +41,7 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         {
             Children.Insert(i + idxOffset, item[i]);
         }
-        ColumnLengths.Insert(rowIndex, length);
+        RowLengths.Insert(rowIndex, length);
         Owner?.Layout.Invalidate();
     }
 

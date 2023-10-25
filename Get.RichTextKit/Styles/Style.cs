@@ -129,7 +129,7 @@ namespace Get.RichTextKit
         /// <summary>
         /// The background color of this run (no background is painted by default).
         /// </summary>
-        public SKColor BackgroundColor
+        public SKColor? BackgroundColor
         {
             get => _backgroundColor;
             set
@@ -222,7 +222,7 @@ namespace Get.RichTextKit
         StrikeThroughStyle _strikeThrough;
         float _lineHeight = 1.0f;
         SKColor? _textColor = null;
-        SKColor _backgroundColor = SKColor.Empty;
+        SKColor? _backgroundColor = null;
         SKColor _haloColor = SKColor.Empty;
         float _haloWidth = 0f;
         float _haloBlur = 0f;

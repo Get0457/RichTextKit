@@ -19,6 +19,11 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
     [Property(OnChanged = nameof(InvokeLayoutChanged))]
     float _TableDefaultRatioHeightSize = 100;
     TableLayoutInfo _layoutInfo;
+    public TableLayoutInfo GetCurrentLayoutInfo()
+    {
+        Owner?.Layout.EnsureValid();
+        return _layoutInfo.Copy();
+    }
     protected override void LayoutOverride(LayoutParentInfo owner)
     {
         var parentInfo = new LayoutParentInfo(default, owner.LineWrap, owner.LineNumberMode);
@@ -125,7 +130,18 @@ public partial class TableParagraph : PanelParagraph, ITable<Paragraph>
         }
         return (RowsPos, RowsWidth);
     }
-    record struct TableLayoutInfo(float[] RowsPos, float[] RowsHeight, float[] ColumnsPos, float[] ColumnsWidth);
+    public record struct TableLayoutInfo(float[] RowsPos, float[] RowsHeight, float[] ColumnsPos, float[] ColumnsWidth)
+    {
+        public TableLayoutInfo Copy()
+        {
+            return new(
+                (float[])RowsPos.Clone(),
+                (float[])RowsHeight.Clone(),
+                (float[])ColumnsPos.Clone(),
+                (float[])ColumnsWidth.Clone()
+            );
+        }
+    }
     protected override float ContentWidthOverride
         => _layoutInfo.ColumnsPos[^1] + _layoutInfo.ColumnsWidth[^1];
 

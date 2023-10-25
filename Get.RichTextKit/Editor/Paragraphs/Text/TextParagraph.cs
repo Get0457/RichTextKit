@@ -24,6 +24,8 @@ using Get.RichTextKit.Utils;
 using Get.RichTextKit.Styles;
 using Get.RichTextKit.Editor.DocumentView;
 using System.Diagnostics;
+using System.Net;
+using System.Text;
 
 namespace Get.RichTextKit.Editor.Paragraphs;
 
@@ -205,7 +207,8 @@ public partial class TextParagraph : Paragraph, ITextParagraph, IAlignableParagr
     {
         TextBlock.ApplyStyle(position, length, style);
     }
-    public override CaretPosition EndCaretPosition => new(TextBlock.Length - 1, false);
+    public override CaretPosition UserEndCaretPosition => new(TextBlock.Length - 1, false);
+    public override CaretPosition TrueEndCaretPosition => new(TextBlock.Length, true);
 
     void ITextParagraph.OnTextBlockChanged() { }
     void ITextParagraph.EnsureReadyToModify() { }
